@@ -11,7 +11,7 @@ import time
 import random
 # from emoji import emojize
 
-WIDTH = 16
+WIDTH = 10
 PLAYER_POSITION = 3
 
 FPS = 30
@@ -103,6 +103,7 @@ def render():
 
     for i in range(0, WIDTH - 1):
         print(world[i], end="")
+    print(f"{total_km:.2f}km/", end="")
 
     if wpm_timer_start is None and len(typed_history) > 0:
         wpm_timer_start = time.time()
@@ -116,10 +117,11 @@ def render():
 
     if curr_round_wpm is not None:
         print(
-            f"{curr_round_wpm}wpm/{len(typed_history):3}/", end="")
+            f"{curr_round_wpm}wpm", end="")
     else:
         no_wpm = 0
-        print(f"{no_wpm:.2f}wpm/{len(typed_history):3}/", end="")
+        # print(f"{no_wpm:.2f}wpm/{len(typed_history):3}/", end="")
+        print(f"{no_wpm:.2f}wpm", end="")
 
     if wpm_timer_end is not None:
         wpm_timer_end = time.time()
@@ -127,11 +129,10 @@ def render():
         curr_round_wpm = get_wpm(
             len_entries, wpm_timer_start, wpm_timer_end)
         print(
-            f"{curr_round_wpm}wpm/{len(typed_history):3}/", end="")
+            f"{curr_round_wpm}wpm", end="")
         wpm_timer_start = None
         wpm_timer_end = None
     # print(f"Total km: {total_km:.2f} ", end="")
-    print(f"{total_km:.2f}km", end="")
     print()
 
     if debug_text:
@@ -269,8 +270,5 @@ if __name__ == "__main__":
 
 
 """
-sdfsdfsdlfksjdfs
-asdfsdfkljasdfflkj
-asdadfsadfsdf
 
 """
