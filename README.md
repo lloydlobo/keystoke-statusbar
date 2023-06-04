@@ -58,7 +58,7 @@ that the output is continuously updated in the status bar.
 
 ## Credits
 
-- [@petternett](https://github.com/petternett/railway-statusbar/blob/main/src/railway.py)
+- [@petternett](https://github.com/petternett/railway-statusbar)
   for providing inspiration for this project.
 
 Feel free to modify the configuration and adapt it to your specific setup
