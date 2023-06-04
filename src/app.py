@@ -108,28 +108,30 @@ def render():
     if wpm_timer_start is None and len(typed_history) > 0:
         wpm_timer_start = time.time()
 
-    if len(typed_history) >= 200:
+    len_total = len(typed_history)
+
+    if len_total >= 200:
         if len(typed_history_cache) >= 5:
             typed_history_cache.clear()
         typed_history_cache.append(typed_history)
         typed_history.clear()
         wpm_timer_end = time.time()
 
+    len_total = len(typed_history)
+
     if curr_round_wpm is not None:
-        print(
-            f"{curr_round_wpm}wpm", end="")
+        print(f"{curr_round_wpm}wpm/{len_total:3}", end="")
     else:
         no_wpm = 0
-        # print(f"{no_wpm:.2f}wpm/{len(typed_history):3}/", end="")
-        print(f"{no_wpm:.2f}wpm", end="")
+        print(f"{no_wpm:.2f}wpm/{len_total:3}/", end="")
+        # print(f"{no_wpm:.2f}wpm", end="")
 
     if wpm_timer_end is not None:
         wpm_timer_end = time.time()
         len_entries = 200
         curr_round_wpm = get_wpm(
             len_entries, wpm_timer_start, wpm_timer_end)
-        print(
-            f"{curr_round_wpm}wpm", end="")
+        print(f"{curr_round_wpm}wpm/{len_total:3}", end="")
         wpm_timer_start = None
         wpm_timer_end = None
     # print(f"Total km: {total_km:.2f} ", end="")
