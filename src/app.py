@@ -85,6 +85,8 @@ class App:
     # - Collect data to calculate wpm.
     # - Concatenate a single buffer with message modules and print per frame.
     def render(self) -> None:
+        # PERF: self.world is used inside `render()` scope only. Consider
+        # using local variable.
         self.world = [bg if bg is not None else RAIL_CHAR
                       for bg in self.background]
         self.world = [fg if fg is not None else self.world[i]
@@ -115,25 +117,29 @@ class App:
             self.wpm_timer_start = None
             self.wpm_timer_end = None
 
-        # Build the output string buffer.
-        output_buffer = ""
-        # Construct output string.
-        filtered_world = [item for item in self.world if item is not None]
-        output_buffer += "{:<{width}}".format(
-            "".join(filtered_world), width=(2*WIDTH))
-        if self.listener_paused:
-            output_buffer += "<Esc>: Toggle keys "
-        else:
-            output_buffer += "{:<{width}}".format(
-                f"{self.curr_key} " if self.curr_key is not None else "",
-                width=5,)  # 9 chars max <Backspace> 5 for <shift>
-        output_buffer += "{:.2f}km/".format(self.total_km)
-        output_buffer += "{:<4}".format(
-            "{}wpm/".format(self.curr_round_wpm)
-            if self.curr_round_wpm is not None else "0.00wpm")
-        output_buffer += "{:<3}\n".format(len_total)
+        # Prepare the output modules for final string buffer.
+        output_module = []
 
-        print(output_buffer)  # Print current frame's buffer.
+        # Construct [output-] [-module] to join into [-string] later.
+        filtered_world = [item for item in self.world if item is not None]
+        # output_buffer += "{:<{width}}".format(
+        # "".join(filtered_world), width=(2*WIDTH))
+        output_module.append("{:<{width}}".format(
+            "".join(filtered_world), width=(2*WIDTH)))
+        if self.listener_paused:
+            output_module.append("<Esc>: Toggle keys ")
+        else:
+            # 9 chars max <Backspace> 5 for <shift>
+            output_module.append("{:<{width}}".format(
+                f"{self.curr_key} "
+                if self.curr_key is not None else "", width=5,))
+        output_module.append("{:.2f}km/".format(self.total_km))
+        output_module.append("{:<4}".format(
+            "{}wpm/".format(self.curr_round_wpm)
+            if self.curr_round_wpm is not None else "0.00wpm"))
+        output_module.append("{:<3}\n".format(len_total))
+
+        print("".join(output_module))  # Print current frame's buffer.
 
         if self.debug_text:
             print(f"DEBUG: {self.debug_text}")
@@ -184,9 +190,9 @@ class App:
 
         self.render()  # Initial rendering.
 
-        # App loop:
+        # App loop: (while 1 is faster than while True)
         # Process input -> Update world, physics -> Render output -> Sleep.
-        while True:
+        while 1:
             # For when we need >1 events per tick.
             n_events = 0
             # Process user input. If key event happens during tick:
@@ -244,6 +250,8 @@ class App:
 
             self.render()
 
+            # PERF: BONUS speed up animation if velocity is high.
+            # Now, User has to wait for all frames to render or catch up.
             time.sleep(curr_time + FRAME_DELAY - time.time())
 
 
@@ -282,4 +290,5 @@ if __name__ == "__main__":
     # world = [x if x is not None else RAIL_CHAR for x in self.background]
     # world = [value if value is not None else world[i] for i, value
     #          in enumerate(self.foreground)]
+
 """
