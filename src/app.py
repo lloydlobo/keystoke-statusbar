@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
+Keystrokes
+
 Inspiration: https://github.com/petternett/railway-statusbar
 """
 
@@ -15,14 +17,9 @@ WIDTH = 10
 PLAYER_POSITION = 3
 
 FPS = 30
-DELAY = 1.0 / FPS
+FRAME_DELAY = 1.0 / FPS
 MAX_SPEED = 1
 FRICTION_CONST = 0.8
-velocity = 0.0
-total_km = 0.0
-curr_key = None
-typed_history = []
-typed_history_cache = []
 
 RAIL_CHAR = '..'
 PLAYER_CHAR = "#"
@@ -30,247 +27,226 @@ FIRE_CHAR = "`"
 CACTUS_CHAR = "|"
 HILL_CHAR = "~"
 
-world = [None] * WIDTH
-foreground = [None] * WIDTH
-background = [None] * WIDTH
+MAX_HILL_COUNT = 3
 PARA_CONST = 9
 MAX_PARA_ELEMENTS = 2
 
-fire_disp = 0
-hill_count = 0
-MAX_HILL_COUNT = 3
-
-new_press_event = None
-key_pressed = False
-
-listener_paused = False
-
-debug_text = None
+WPM_CHARS_PER_ROUND = 200
+WPM_AVERAGE_WORD_LEN = 5
 
 
-start_time_wpm = time.time()
-char_count_wpm = 0
-wpm_timer_start = None
-wpm_timer_end = None  # For 200 entries or key press
-curr_round_wpm = 0.0
+class App:
+    def __init__(self):
+        self.velocity = 0.0
+        self.total_km = 0.0
+        self.curr_key = None
+        self.typed_history = []
+        self.typed_history_cache = []
+        self.fire_disp = 0
+        self.hill_count = 0
+        self.new_press_event = None
+        self.key_pressed = False
+        self.listener_paused = False
+        self.start_time_wpm = time.time()
+        self.char_count_wpm = 0
+        self.wpm_timer_start = None
+        self.wpm_timer_end = None  # For 200 entries or key press
+        self.curr_round_wpm = 0.0
+        self.debug_text = None
 
+        self.world = [None] * WIDTH
+        self.foreground = [None] * WIDTH
+        self.background = [None] * WIDTH
 
-def calculate_wpm(char_count, elapsed_time):
-    AVERAGE_WORD_LEN = 5
-    words = char_count/AVERAGE_WORD_LEN
-    minutes = elapsed_time / 60
-    wpm = words / minutes
-    return round(wpm/1000, 2)
-
-
-def get_wpm(len_entries, wpm_timer_start, wpm_timer_end):
-    AVERAGE_WORD_LEN = 5
-    elapsed_time = wpm_timer_end - wpm_timer_start
-    words = len_entries / AVERAGE_WORD_LEN
-    minutes = elapsed_time / 60
-    wpm = words/minutes
-    return round(wpm, 2)
-
-
-def render():
-    global fire_disp, curr_key, typed_history, typed_history_cache
-    global wpm_timer_start, wpm_timer_end, curr_round_wpm
-
-    # DEBUG
-    # print(f"{curr_key} ", end="")
-
-    # Compose text world.
-    world = [x for x in background]
-
-    for i in range(0, WIDTH):
-        if foreground[i] is not None:
-            world[i] = foreground[i]
-        elif world[i] is None:
-            world[i] = RAIL_CHAR
-
-    world[PLAYER_POSITION] = PLAYER_CHAR
-    if velocity > 0.9:
-        world[PLAYER_POSITION - 1] = FIRE_CHAR
-        if fire_disp % 3 == 0 or fire_disp % 2 == 0:
-            world[PLAYER_POSITION - 2] = FIRE_CHAR
-        fire_disp += 1
-
-    global listener_paused
-
-    if listener_paused:
-        print('Escape to resume')
-        return
-
-    for i in range(0, WIDTH - 1):
-        print(world[i], end="")
-    print(f"{total_km:.2f}km/", end="")
-
-    if wpm_timer_start is None and len(typed_history) > 0:
-        wpm_timer_start = time.time()
-
-    len_total = len(typed_history)
-
-    if len_total >= 200:
-        if len(typed_history_cache) >= 5:
-            typed_history_cache.clear()
-        typed_history_cache.append(typed_history)
-        typed_history.clear()
-        wpm_timer_end = time.time()
-
-    len_total = len(typed_history)
-
-    if curr_round_wpm is not None:
-        print(f"{curr_round_wpm}wpm/{len_total:3}", end="")
-    else:
-        no_wpm = 0
-        print(f"{no_wpm:.2f}wpm/{len_total:3}/", end="")
-        # print(f"{no_wpm:.2f}wpm", end="")
-
-    if wpm_timer_end is not None:
-        wpm_timer_end = time.time()
-        len_entries = 200
-        curr_round_wpm = get_wpm(
-            len_entries, wpm_timer_start, wpm_timer_end)
-        print(f"{curr_round_wpm}wpm/{len_total:3}", end="")
-        wpm_timer_start = None
-        wpm_timer_end = None
-    # print(f"Total km: {total_km:.2f} ", end="")
-    print()
-
-    if debug_text:
-        print(f"DEBUG: {debug_text}")
-
-
-def debug(text):
-    global debug_text
-    debug_text = text
-
-
-def pause_listener():
-    global listener_paused
-    listener_paused = True
-
-
-def resume_listener():
-    global listener_paused
-    listener_paused = False
-
-
-# def on_press(key):
-#     global key_pressed, char_counter
-#     if not listener_paused:
-#         char_counter += 1
-#         try:
-#             key_pressed = True  # 'alphanumeric key {0} pressed'
-#             # print('{0}'.format(key.char),)
-#             # print('{0}'.format(key.char), end='', flush=True)
-#         except AttributeError:
-#             key_pressed = True  # 'special key {0} pressed'
-#             # print('{0}'.format(key), )
-#             # print('{0}'.format(key), end='', flush=True)
-
-
-def on_release(key):
-    global typed_history, new_press_event, key_pressed, listener_paused, curr_key
-    new_press_event.set()
-    key_pressed = True  # False if using on_press.
-    try:
-        curr_key = format(key.char)
-        typed_history.append(curr_key)
-    except AttributeError:
-        key_char = str(key).replace("Key.", "")
-        curr_key = format(key_char)
-        typed_history.append(curr_key)
-
-    if key == keyboard.Key.esc:
-        if not listener_paused:
-            listener_paused = True
+    def get_wpm(self, len_entries):
+        if self.wpm_timer_start is not None and self.wpm_timer_end is not None:
+            elapsed_time = self.wpm_timer_end - self.wpm_timer_start
+            minutes = elapsed_time / 60
+            words = len_entries / WPM_AVERAGE_WORD_LEN
+            return round(words / minutes, 2)
         else:
-            listener_paused = False
-        # return False # Stop listener.
+            raise ValueError(
+                """
+                Invalid `wpm_timer_start` or `wpm_timer_end` values.
+                Expected `float` found `None`.
+                """
+            )
 
+    # DEBUG print(f"{curr_key} ", end="")
+    def render(self):
+        world = [x for x in self.background]  # Compose text world.
 
-def run():
-    global foreground, background, new_press_event, key_pressed, total_km, velocity, hill_count
+        for i in range(0, WIDTH):
+            if self.foreground[i] is not None:
+                world[i] = self.foreground[i]
+            elif world[i] is None:
+                world[i] = RAIL_CHAR
 
-    ax = 0.0
-    counter = 0.0
-    para = 0
+        world[PLAYER_POSITION] = PLAYER_CHAR
+        if self.velocity > 0.9:
+            world[PLAYER_POSITION - 1] = FIRE_CHAR
+            if self.fire_disp % 3 == 0 or self.fire_disp % 2 == 0:
+                world[PLAYER_POSITION - 2] = FIRE_CHAR
+            self.fire_disp += 1
 
-    new_press_event = threading.Event()
-    # Non-Blocking: Collect events until released.
-    listener = keyboard.Listener(on_release=on_release)
-    listener.start()
+        if self.listener_paused:
+            print('Escape to resume')
+            return
 
-    render()  # Initial rendering.
+        for i in range(0, WIDTH - 1):
+            print(world[i], end="")
+        print(f"{self.total_km:.2f}km/", end="")
 
-    # App loop:
-    # - Process input.
-    # - Update world, physics.
-    # - Render output.
-    # - Sleep.
-    while True:
-        # For when we need >1 events per tick.
-        n_events = 0
-        # Process user input. If key event happens during tick:
-        if (key_pressed):
-            n_events += 1
-            key_pressed = False
-            # last_activity_time = time.time()
-        elif n_events > 0:
-            n_events -= 1
+        len_total = len(self.typed_history)
+        if self.wpm_timer_start is None and len_total > 0:
+            self.wpm_timer_start = time.time()
 
-        if n_events > 0:
-            ax += 0.02
-        elif velocity > 0:
-            ax -= 0.005
-        elif velocity <= 0:
-            ax = 0
-            velocity = 0
+        if len_total >= WPM_CHARS_PER_ROUND:
+            if len(self.typed_history_cache) >= 5:
+                self.typed_history_cache.clear()
+            self.typed_history_cache.append(self.typed_history)
+            self.typed_history.clear()
+            self.wpm_timer_end = time.time()
 
-        # debug(f"velocity: {velocity}, ax: {ax}")
-        velocity += ax - velocity * FRICTION_CONST
-        velocity = min(velocity, MAX_SPEED)
-        if velocity == 0:
-            new_press_event.wait()
-            new_press_event.clear()
+        if self.curr_round_wpm is not None:
+            print(f"{self.curr_round_wpm}wpm/{len_total:3}", end="")
+        else:
+            no_wpm = 0
+            # FIXME: Use Same buffer template pattern.
+            print(f"{no_wpm:.2f}wpm/{len_total:3}/", end="")
+            # print(f"{no_wpm:.2f}wpm", end="")
 
-        curr_time = time.time()
+        if self.wpm_timer_end is not None:
+            self.wpm_timer_end = time.time()
+            self.curr_round_wpm = self.get_wpm(WPM_CHARS_PER_ROUND)
 
-        counter += velocity
+            print(f"{self.curr_round_wpm}wpm/{len_total:3}", end="")
+            self.wpm_timer_start = None
+            self.wpm_timer_end = None
 
-        if counter >= 1:
-            foreground.pop(0)
-            if random.randint(0, FPS/2) == 1:
-                foreground.append(CACTUS_CHAR)
-            else:
-                foreground.append(None)
+        # print(f"Total km: {total_km:.2f} ", end="")
+        print()
 
-            if para == 0:
-                if background[0] == HILL_CHAR:
-                    hill_count -= 1
+        if self.debug_text:
+            print(f"DEBUG: {self.debug_text}")
 
-                background.pop(0)
-                if random.randint(0, 2) == 1 and hill_count < MAX_HILL_COUNT:
-                    background.append(HILL_CHAR)
-                    hill_count += 1
+    def debug(self, text):
+        self.debug_text = text
+
+    def pause_listener(self,):
+        self.listener_paused = True
+
+    def resume_listener(self,):
+        self.listener_paused = False
+
+    # def on_press(key):
+    #     if not listener_paused:
+    #         try:
+    #             key_pressed = True  # 'alphanumeric key {0} pressed'
+    #             # print('{0}'.format(key.char), end='', flush=True)
+    #         except AttributeError:
+    #             key_pressed = True  # 'special key {0} pressed'
+    #             # print('{0}'.format(key), end='', flush=True)
+
+    def on_release(self, key):
+        self.new_press_event.set()
+        self.key_pressed = True  # False if using on_press.
+        try:
+            self.curr_key = format(key.char)
+        except AttributeError:
+            key_char = str(key).replace("Key.", "")
+            self.curr_key = format(key_char)
+
+        self.typed_history.append(self.curr_key)
+        if key == keyboard.Key.esc:
+            self.listener_paused = not self.listener_paused
+            # return False # Stop listener.
+
+    def run(self):
+        ax = 0.0
+        counter = 0.0
+        para = 0
+
+        self.new_press_event = threading.Event()
+        # Non-Blocking: Collect events until released.
+        listener = keyboard.Listener(on_release=self.on_release)
+        listener.start()
+
+        self.render()  # Initial rendering.
+
+        # App loop:
+        # - Process input.
+        # - Update world, physics.
+        # - Render output.
+        # - Sleep.
+        while True:
+            # For when we need >1 events per tick.
+            n_events = 0
+            # Process user input. If key event happens during tick:
+            if (self.key_pressed):
+                n_events += 1
+                self.key_pressed = False
+            elif n_events > 0:
+                n_events -= 1
+
+            if n_events > 0:
+                ax += 0.02
+            elif self.velocity > 0:
+                ax -= 0.005
+            elif self.velocity <= 0:
+                ax = 0
+                self.velocity = 0
+
+            # debug(f"velocity: {velocity}, ax: {ax}")
+            self.velocity += ax - self.velocity * FRICTION_CONST
+            self.velocity = min(self.velocity, MAX_SPEED)
+
+            if self.velocity == 0:
+                self.new_press_event.wait()
+                self.new_press_event.clear()
+
+            curr_time = time.time()
+            counter += self.velocity
+
+            if counter >= 1:
+                self.foreground.pop(0)
+                # NOTE: get upper-bound(largest integer) floor division result.
+                if random.randint(0, FPS // 2) == 1:
+                    self.foreground.append(CACTUS_CHAR)
                 else:
-                    background.append(None)
+                    self.foreground.append(None)
 
-            para += 1
-            para %= PARA_CONST
-            counter -= 1
-            total_km += 0.01
+                if para == 0:
+                    if self.background[0] == HILL_CHAR:
+                        self.hill_count -= 1
 
-        render()
+                    self.background.pop(0)
+                    if random.randint(0, 2) == 1 and self.hill_count < MAX_HILL_COUNT:
+                        self.background.append(HILL_CHAR)
+                        self.hill_count += 1
+                    else:
+                        self.background.append(None)
 
-        time.sleep(curr_time + DELAY - time.time())
+                para += 1
+                para %= PARA_CONST
+                counter -= 1
+                self.total_km += 0.01
+
+            self.render()
+
+            time.sleep(curr_time + FRAME_DELAY - time.time())
 
 
 if __name__ == "__main__":
-    run()
+    animation = App()
+    animation.run()
 
 
 """
-
+    # frame_start_time = time.monotonic()
+    ...
+    # NOTE: DO NOT USE THIS, as no delay leads to appending
+    # multiple chars to `world` background foreground.
+    # frame_elapsed_time = time.monotonic() - frame_start_time
+    # if frame_elapsed_time < FRAME_DELAY: time.sleep(FRAME_DELAY - frame_elapsed_time)
 """
