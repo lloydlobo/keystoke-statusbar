@@ -26,10 +26,10 @@ FRICTION_CONST: float = 0.8
 RAIL_CHAR: str = '..'
 PLAYER_CHAR: str = ''
 FIRE_CHAR: str = '='
-HILL_CHAR: str = ''
+CLOUD_CHAR: str = ''
 TREE_CHAR: str = ''
 
-MAX_HILL_COUNT: int = 3
+MAX_CLOUD_COUNT: int = 3
 PARA_CONST: int = 9
 MAX_PARA_ELEMENTS: int = 2
 
@@ -54,7 +54,7 @@ class App:
         self.velocity: float = 0.0
         self.total_km: float = 0.0
         self.fire_disp: int = 0
-        self.hill_count: int = 0
+        self.cloud_count: int = 0
         # self.char_count_wpm: int = 0
 
         # Key-related members.
@@ -255,15 +255,15 @@ class App:
                     self.foreground.append(None)
 
                 if para == 0:
-                    if self.background[0] == HILL_CHAR:
-                        self.hill_count -= 1
+                    if self.background[0] == CLOUD_CHAR:
+                        self.cloud_count -= 1
 
                     self.background.pop(0)
 
                     if (random.randint(0, 2) == 1
-                            and self.hill_count < MAX_HILL_COUNT):
-                        self.background.append(HILL_CHAR)
-                        self.hill_count += 1
+                            and self.cloud_count < MAX_CLOUD_COUNT):
+                        self.background.append(CLOUD_CHAR)
+                        self.cloud_count += 1
                     else:
                         self.background.append(None)
 
