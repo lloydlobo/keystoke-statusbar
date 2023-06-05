@@ -72,30 +72,45 @@ class App:
                 """
             )
 
-    # DEBUG print(f"{curr_key} ", end="")
+    # world = [x for x in self.background]  # Compose text world.
+    # for i in range(0, WIDTH):
+    #    if self.foreground[i] is not None:
+    #        world[i] = self.foreground[i]
+    #    elif world[i] is None:
+    #        world[i] = RAIL_CHAR
+    # OR
+    # Clone and apply RAIL tracks if empty.
+    # world = [x if x is not None else RAIL_CHAR for x in self.background]
+    # world = [value if value is not None else world[i] for i, value
+    #          in enumerate(self.foreground)]
     def render(self):
-        world = [x for x in self.background]  # Compose text world.
+        # Compose text world.
+        self.world = [
+            x if x is not None else RAIL_CHAR for x in self.background]
+        for i, value in enumerate(self.foreground):
+            if value is not None:
+                self.world[i] = value
+            elif self.world[i] is None:
+                self.world[i] = RAIL_CHAR
 
-        for i in range(0, WIDTH):
-            if self.foreground[i] is not None:
-                world[i] = self.foreground[i]
-            elif world[i] is None:
-                world[i] = RAIL_CHAR
-
-        world[PLAYER_POSITION] = PLAYER_CHAR
+        self.world[PLAYER_POSITION] = PLAYER_CHAR
         if self.velocity > 0.9:
-            world[PLAYER_POSITION - 1] = FIRE_CHAR
+            self.world[PLAYER_POSITION - 1] = FIRE_CHAR
             if self.fire_disp % 3 == 0 or self.fire_disp % 2 == 0:
-                world[PLAYER_POSITION - 2] = FIRE_CHAR
+                self.world[PLAYER_POSITION - 2] = FIRE_CHAR
             self.fire_disp += 1
 
         if self.listener_paused:
             print('Escape to resume')
             return
 
-        for i in range(0, WIDTH - 1):
-            print(world[i], end="")
-        print(f"{self.total_km:.2f}km/", end="")
+        # Build the output string buffer.
+        output_buffer = ""
+
+        # for i in range(0, WIDTH - 1):
+        #   # print(self.world[i], end="")
+
+        # print(f"{self.total_km:.2f}km/", end="")
 
         len_total = len(self.typed_history)
         if self.wpm_timer_start is None and len_total > 0:
@@ -108,24 +123,43 @@ class App:
             self.typed_history.clear()
             self.wpm_timer_end = time.time()
 
-        if self.curr_round_wpm is not None:
-            print(f"{self.curr_round_wpm}wpm/{len_total:3}", end="")
-        else:
-            no_wpm = 0
-            # FIXME: Use Same buffer template pattern.
-            print(f"{no_wpm:.2f}wpm/{len_total:3}/", end="")
-            # print(f"{no_wpm:.2f}wpm", end="")
+        # if self.curr_round_wpm is not None:
+        #     print(f"{self.curr_round_wpm}wpm/{len_total:3}", end="")
+        # else:
+        #     no_wpm = 0
+        #     # FIXME: Use Same buffer template pattern.
+        #     print(f"{no_wpm:.2f}wpm/{len_total:3}/", end="")
+        #     # print(f"{no_wpm:.2f}wpm", end="")
 
         if self.wpm_timer_end is not None:
             self.wpm_timer_end = time.time()
             self.curr_round_wpm = self.get_wpm(WPM_CHARS_PER_ROUND)
 
-            print(f"{self.curr_round_wpm}wpm/{len_total:3}", end="")
+            # print(f"{self.curr_round_wpm}wpm/{len_total:3}", end="")
             self.wpm_timer_start = None
             self.wpm_timer_end = None
 
-        # print(f"Total km: {total_km:.2f} ", end="")
-        print()
+        # DEBUG
+        # print(f"{self.curr_key} ", end="")
+        # output_buffer += f"{self.curr_key} " if self.curr_key is not None else ""
+
+        # Construct output string.
+        output_buffer += "{:<{width}}".format("".join(
+            self.world[:WIDTH-1]), width=(2*WIDTH)
+        )
+        output_buffer += "{:<{width}}".format(
+            f"{self.curr_key} " if self.curr_key is not None else "",
+            width=5,
+        )  # 9 chars max <Backspace> 5 for <shift>
+        output_buffer += "{:.2f}km/".format(self.total_km)
+        output_buffer += "{:<4}".format(
+            "{}wpm/".format(self.curr_round_wpm)
+            if self.curr_round_wpm is not None else "0.00wpm"
+        )
+        output_buffer += "{:<3}\n".format(len_total)
+
+        # print()  # New line for next frame.
+        print(output_buffer)  # Print current frame's buffer.
 
         if self.debug_text:
             print(f"DEBUG: {self.debug_text}")
@@ -248,5 +282,7 @@ if __name__ == "__main__":
     # NOTE: DO NOT USE THIS, as no delay leads to appending
     # multiple chars to `world` background foreground.
     # frame_elapsed_time = time.monotonic() - frame_start_time
-    # if frame_elapsed_time < FRAME_DELAY: time.sleep(FRAME_DELAY - frame_elapsed_time)
+    # if frame_elapsed_time < FRAME_DELAY: time.sleep(FRAME_DELAY
+                                                      - frame_elapsed_time)
+
 """
