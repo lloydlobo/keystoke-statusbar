@@ -7,10 +7,10 @@ Keystrokes
 Inspiration: https://github.com/petternett/railway-statusbar
 """
 
-import threading
-import time
 import random
 
+from time import time, sleep
+from threading import Event
 from typing import List, Union  # Literal, Optional
 
 from pynput import keyboard  # from emoji import emojize
@@ -60,11 +60,11 @@ class App:
         # Key-related members.
         self.curr_key: Union[str, None] = None
         self.key_pressed: bool = False
-        self.new_press_event: Union[threading.Event, None] = None
+        self.new_press_event: Union[Event, None] = None
         self.listener_paused: bool = False
 
         # Time-related members.
-        self.start_time_wpm: float = time.time()
+        self.start_time_wpm: float = time()
         self.wpm_timer_start: Union[float, None] = None
         self.wpm_timer_end: Union[float, None] = None  # For 200 key releases.
         self.curr_round_wpm: float = 0.0
@@ -101,14 +101,14 @@ class App:
 
         len_total = len(self.typed_history)
         if self.wpm_timer_start is None and len_total > 0:
-            self.wpm_timer_start = time.time()
+            self.wpm_timer_start = time()
 
         if len_total >= WPM_CHARS_PER_ROUND:
             if len(self.typed_history_cache) >= 5:
                 self.typed_history_cache.clear()
             self.typed_history_cache.append(self.typed_history)
             self.typed_history.clear()
-            self.wpm_timer_end = time.time()
+            self.wpm_timer_end = time()
 
         if self.wpm_timer_end is not None:
             # self.wpm_timer_end = time.time() # HACK: Set timer twice?
@@ -137,7 +137,7 @@ class App:
         output_module.append("{:<4}".format(
             "{}wpm/".format(self.curr_round_wpm)
             if self.curr_round_wpm is not None else "0.00wpm"))
-        output_module.append("{:<3}\n".format(len_total))
+        output_module.append("{:<3}".format(len_total))
 
         print("".join(output_module))  # Print current frame's buffer.
 
@@ -146,7 +146,7 @@ class App:
 
     def on_release(self, key) -> None:
         assert isinstance(
-            self.new_press_event, threading.Event
+            self.new_press_event, Event
         ) or (
             self.new_press_event is None,
             "new_press_event must be an instance of Event or None"
@@ -184,7 +184,7 @@ class App:
         para = 0
 
         # Non-Blocking: Collect events until released.
-        self.new_press_event = threading.Event()
+        self.new_press_event = Event()
         listener = keyboard.Listener(on_release=self.on_release)
         listener.start()
 
@@ -218,7 +218,7 @@ class App:
                 self.new_press_event.wait()
                 self.new_press_event.clear()
 
-            curr_time = time.time()
+            curr_time = time()
             counter += self.velocity
 
             if counter >= 1:
@@ -252,7 +252,7 @@ class App:
 
             # PERF: BONUS speed up animation if velocity is high.
             # Now, User has to wait for all frames to render or catch up.
-            time.sleep(curr_time + FRAME_DELAY - time.time())
+            sleep(curr_time + FRAME_DELAY - time())
 
 
 if __name__ == "__main__":
@@ -266,7 +266,7 @@ if __name__ == "__main__":
     # NOTE: DO NOT USE THIS, as no delay leads to appending
     # multiple chars to `world` background foreground.
     # frame_elapsed_time = time.monotonic() - frame_start_time
-    # if frame_elapsed_time < FRAME_DELAY: time.sleep(FRAME_DELAY
+    # if frame_elapsed_time < FRAME_DELAY: sleep(FRAME_DELAY
                                                       - frame_elapsed_time)
 
     # def on_press(key):
