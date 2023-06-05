@@ -10,12 +10,12 @@ Inspiration: https://github.com/petternett/railway-statusbar
 import random
 
 from time import time, sleep
-from threading import Event
+from threading import Event, Thread
 from typing import List, Union  # Literal, Optional
 
 from pynput import keyboard  # from emoji import emojize
 
-WIDTH: int = 12
+WIDTH: int = 16
 PLAYER_POSITION: int = 3  # [..][..][..][v.][RAIL_CHAR]....
 
 FPS: int = 30
@@ -24,10 +24,10 @@ MAX_SPEED: int = 1
 FRICTION_CONST: float = 0.8
 
 RAIL_CHAR: str = '..'
-PLAYER_CHAR: str = '#'
-FIRE_CHAR: str = '`'
-TREE_CHAR: str = '|'
-HILL_CHAR: str = '~'
+PLAYER_CHAR: str = ''
+FIRE_CHAR: str = '='
+HILL_CHAR: str = ''
+TREE_CHAR: str = ''
 
 MAX_HILL_COUNT: int = 3
 PARA_CONST: int = 9
@@ -55,7 +55,7 @@ class App:
         self.total_km: float = 0.0
         self.fire_disp: int = 0
         self.hill_count: int = 0
-        self.char_count_wpm: int = 0
+        # self.char_count_wpm: int = 0
 
         # Key-related members.
         self.curr_key: Union[str, None] = None
@@ -64,7 +64,7 @@ class App:
         self.listener_paused: bool = False
 
         # Time-related members.
-        self.start_time_wpm: float = time()
+        # self.start_time_wpm: float = time()
         self.wpm_timer_start: Union[float, None] = None
         self.wpm_timer_end: Union[float, None] = None  # For 200 key releases.
         self.curr_round_wpm: float = 0.0
@@ -80,17 +80,20 @@ class App:
         self.background: List[Union[str, None]] = [None] * WIDTH
 
     # - Merge background and foreground to compose world.
-    #   - Assign values from self.background. Assign `RAIL_CHAR` if None.
-    #   - Assign values from self.foreground. Keeps existing if None.
+    #   - `self.foreground[i]` is assigned to `self.world[i]` if not None.
+    #   - else, if `self .world[i]` is None, `RAIL_CHAR` is assigned.
     # - Collect data to calculate wpm.
     # - Concatenate a single buffer with message modules and print per frame.
     def render(self) -> None:
-        # PERF: self.world is used inside `render()` scope only. Consider
-        # using local variable.
-        self.world = [bg if bg is not None else RAIL_CHAR
-                      for bg in self.background]
-        self.world = [fg if fg is not None else self.world[i]
-                      for i, fg in enumerate(self.foreground)]
+        # PERF: self.world is used `render()` only. Use local variable.
+        self.world = [x for x in self.background]  # Compose text world.
+        self.world = [
+            self.foreground[i]
+            if self.foreground[i] is not None else RAIL_CHAR
+            if self.world[i] is None else self.world[i]
+            for i in range(0, WIDTH)
+        ]
+
         self.world[PLAYER_POSITION] = PLAYER_CHAR
 
         if self.velocity > 0.9:
@@ -104,7 +107,7 @@ class App:
             self.wpm_timer_start = time()
 
         if len_total >= WPM_CHARS_PER_ROUND:
-            if len(self.typed_history_cache) >= 5:
+            if len(self.typed_history_cache) >= 3:
                 self.typed_history_cache.clear()
             self.typed_history_cache.append(self.typed_history)
             self.typed_history.clear()
@@ -178,6 +181,28 @@ class App:
     def resume_listener(self) -> None:
         self.listener_paused = False
 
+    def update(self, frame_delay) -> None:
+        pass
+
+    def neorun(self) -> None:
+        def keyboard_listener() -> None:
+            with keyboard.Listener(on_release=self.on_release) as listener:
+                listener.join()
+
+        listener_thread = Thread(target=keyboard_listener, daemon=True)
+        listener_thread.start()
+
+        while 1:
+            if self.new_press_event is not None:
+                self.new_press_event.wait()
+                self.new_press_event.clear()
+
+            if not self.listener_paused:
+                self.update(FRAME_DELAY)
+                self.render()
+
+            time.sleep(FRAME_DELAY)
+
     def run(self) -> None:
         accelaration = 0.0
         counter = 0.0
@@ -243,7 +268,7 @@ class App:
                         self.background.append(None)
 
                 para += 1
-                para %= PARA_CONST
+                para %= PARA_CONST  # Reset periodically.
 
                 counter -= 1
                 self.total_km += 0.01
@@ -252,7 +277,9 @@ class App:
 
             # PERF: BONUS speed up animation if velocity is high.
             # Now, User has to wait for all frames to render or catch up.
-            sleep(curr_time + FRAME_DELAY - time())
+            frame_duration = curr_time + FRAME_DELAY - time()
+            # sleep(min(0.02, frame_duration))
+            sleep(frame_duration)
 
 
 if __name__ == "__main__":
@@ -290,5 +317,19 @@ if __name__ == "__main__":
     # world = [x if x is not None else RAIL_CHAR for x in self.background]
     # world = [value if value is not None else world[i] for i, value
     #          in enumerate(self.foreground)]
+
+    #   - Assign values from self.background. Assign `RAIL_CHAR` if None.
+    #   - Assign values from self.foreground. Keeps existing if None.
+    # self.world = [bg if bg is not None else RAIL_CHAR
+    #               for bg in self.background]
+    # self.world = [fg if fg is not None else self.world[i]
+    #               for i, fg in enumerate(self.foreground)]
+
+    # for i in range(0, WIDTH):
+    #     if self.foreground[i] is not None:
+    #         self.world[i] = self.foreground[i]
+    #     elif self.world[i] is None:
+    #         self.world[i] = RAIL_CHAR
+
 
 """
