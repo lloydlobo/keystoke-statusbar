@@ -23,7 +23,8 @@ FRAME_DELAY: float = 1.0 / FPS
 MAX_SPEED: int = 1
 FRICTION_CONST: float = 0.8
 
-RAIL_CHAR: str = '..'
+# RAIL_CHAR: str = '..'
+RAIL_CHAR: str = '__'
 PLAYER_CHAR: str = ''
 FIRE_CHAR: str = '='
 CLOUD_CHAR: str = ''
@@ -75,7 +76,8 @@ class App:
         self.debug_text: Union[str, None] = None
 
         # World-related members.
-        self.world: List[Union[str, None]] = [None] * WIDTH
+        # type: List[str]
+        self.world: List[str] = [] * WIDTH
         self.foreground: List[Union[str, None]] = [None] * WIDTH
         self.background: List[Union[str, None]] = [None] * WIDTH
 
@@ -91,9 +93,7 @@ class App:
             else RAIL_CHAR
             for fg, bg in zip(self.foreground, self.background)
         ]
-
         self.world[PLAYER_POSITION] = PLAYER_CHAR
-
         if self.velocity > 0.9:
             self.world[PLAYER_POSITION - 1] = FIRE_CHAR
             if self.fire_disp % 3 == 0 or self.fire_disp % 2 == 0:
@@ -103,52 +103,35 @@ class App:
         len_total = len(self.typed_history)
         if self.wpm_timer_start is None and len_total > 0:
             self.wpm_timer_start = time()
-
         if len_total >= WPM_CHARS_PER_ROUND:
+            self.wpm_timer_end = time()
             if len(self.typed_history_cache) >= 3:
                 self.typed_history_cache.clear()
             self.typed_history_cache.append(self.typed_history)
             self.typed_history.clear()
-            self.wpm_timer_end = time()
-
         if self.wpm_timer_end is not None:
-            # self.wpm_timer_end = time.time() # HACK: Set timer twice?
             self.curr_round_wpm = get_wpm(
                 WPM_CHARS_PER_ROUND, self.wpm_timer_start, self.wpm_timer_end)
             self.wpm_timer_start = None
             self.wpm_timer_end = None
 
-        # Prepare the output modules for final string buffer.
-        output_module = []
-
-        # Construct [output-] [-module] to join into [-string] later.
-        filtered_world = [item for item in self.world if item is not None]
-        # output_buffer += "{:<{width}}".format(
-        # "".join(filtered_world), width=(2*WIDTH))
-        output_module.append("{:<{width}}".format(
-            "".join(filtered_world), width=(2*WIDTH)))
-        if self.listener_paused:
-            output_module.append("<Esc>: Toggle keys ")
-        else:
-            # 9 chars max <Backspace> 5 for <shift>
-            output_module.append("{:<{width}}".format(
-                f"{self.curr_key} "
-                if self.curr_key is not None else "", width=5,))
-        output_module.append("{:.2f}km/".format(self.total_km))
-        output_module.append("{:<4}".format(
-            "{}wpm/".format(self.curr_round_wpm)
-            if self.curr_round_wpm is not None else "0.00wpm"))
-        output_module.append("{:<3}".format(len_total))
-
-        print("".join(output_module))  # Print current frame's buffer.
+        output = []
+        output.append("{:<{width}}".format(
+            "".join(self.world), width=(2*WIDTH)))
+        output.append(
+            "<Esc>: Toggle keys " if self.listener_paused else
+            "{:<{width}}".format(f"{self.curr_key} " if self.curr_key is not None else "", width=5))
+        output.append("{:.2f}km/".format(self.total_km))
+        output.append("{:<4}".format(
+            "{}wpm/".format(self.curr_round_wpm) if self.curr_round_wpm is not None else "0.00wpm"))
+        output.append("{:<3}".format(len_total))
 
         if self.debug_text:
-            print(f"DEBUG: {self.debug_text}")
+            print(f"DEBUG: {self.debug_text}", end=" ")
+        print("".join(output))  # Print current frame's buffer.
 
     def on_release(self, key) -> None:
-        assert isinstance(
-            self.new_press_event, Event
-        ) or (
+        assert isinstance(self.new_press_event, Event) or (
             self.new_press_event is None,
             "new_press_event must be an instance of Event or None"
         )
@@ -246,7 +229,6 @@ class App:
 
             if counter >= 1:
                 self.foreground.pop(0)
-                # `//` gets upper-bound(largest integer) floor division result.
                 if random.randint(0, FPS // 2) == 1:
                     self.foreground.append(TREE_CHAR)
                 else:
@@ -267,17 +249,13 @@ class App:
 
                 para += 1
                 para %= PARA_CONST  # Reset periodically.
-
                 counter -= 1
                 self.total_km += 0.01
 
             self.render()
-
             # PERF: BONUS speed up animation if velocity is high.
             # Now, User has to wait for all frames to render or catch up.
-            frame_duration = curr_time + FRAME_DELAY - time()
-            # sleep(min(0.02, frame_duration))
-            sleep(frame_duration)
+            sleep((curr_time + FRAME_DELAY) - time())
 
 
 if __name__ == "__main__":
@@ -338,6 +316,4 @@ if __name__ == "__main__":
     #     if self.world[i] is None else self.world[i]
     #     for i in range(0, WIDTH)
     # ]
-
-
 """
