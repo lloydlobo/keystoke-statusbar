@@ -29,7 +29,7 @@ FIRE_CHAR: str = '='
 CLOUD_CHAR: str = ''
 TREE_CHAR: str = ''
 
-MAX_CLOUD_COUNT: int = 3
+MAX_CLOUDS: int = 3
 PARA_CONST: int = 9
 MAX_PARA_ELEMENTS: int = 2
 
@@ -229,13 +229,14 @@ class App:
             counter += self.velocity
 
             if counter >= 1:
+                scene_has_tree = randint(0, FPS // 2) == 1  # `//` floor int.
                 self.foreground.pop(0)  # and len(self.foreground) > 0
-                self.foreground.append(TREE_CHAR
-                                       if randint(0, FPS // 2) == 1 else None)
+                self.foreground.append(TREE_CHAR if scene_has_tree else None)
+
                 if para == 0:
                     should_cloud_disappear = self.background[0] == CLOUD_CHAR
                     self.cloud_count -= 1 if should_cloud_disappear else 0
-                    can_rain = (self.cloud_count < MAX_CLOUD_COUNT
+                    can_rain = (self.cloud_count < MAX_CLOUDS
                                 and randint(0, 2) == 1)
                     self.background.pop(0)  # and len(self.background) > 0
                     self.background.append(CLOUD_CHAR) if can_rain else None
@@ -247,14 +248,11 @@ class App:
                 self.total_km += 0.01
 
             self.render()
-            # PERF: BONUS speed up animation if velocity is high.
-            # Now, User has to wait for all frames to render or catch up.
             sleep((curr_time + FRAME_DELAY) - time())
 
 
 if __name__ == "__main__":
-    animation = App()
-    animation.run()
+    App().run()
 
 
 """
