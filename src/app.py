@@ -94,11 +94,23 @@ class App:
                 world[PLAYER_POSITION-2] = FIRE_CHAR
             self.fire_disp += 1
 
+        # PERF: calculate key_count outside on key_release event. Loop runs
+        # 6x times for each keypress, or increment counter at each key press.
         key_count = len(self.key_history)
+
         if self.wpm_timer_start is None and key_count > 0:
             self.wpm_timer_start = time()
         if key_count >= WPM_KEYS_PER_ROUND:
             self.wpm_timer_end = time()
+            # TODO: Use a more efficient approach to handle the self
+            # .key_history_cache list. Instead of clearing the list
+            # and appending elements each time, you can use a deque with
+            # a maximum length to maintain a sliding window of the last
+            # three key history lists:
+            #
+            # self.key_history_cache = deque(self.key_history_cache, maxlen=3)
+            # self.key_history_cache.append(self.key_history.copy())
+
             if len(self.key_history_cache) >= 3:
                 self.key_history_cache.clear()
             self.key_history_cache.append(self.key_history)
@@ -106,10 +118,9 @@ class App:
         if self.wpm_timer_end is not None:
             self.curr_round_wpm = get_wpm(
                 WPM_KEYS_PER_ROUND, self.wpm_timer_start, self.wpm_timer_end,)
-            self.wpm_timer_start = None
-            self.wpm_timer_end = None
+            self.wpm_timer_start = self.wpm_timer_end = None
 
-        scene = []
+        scene: List[str] = []
         scene.append("".join(world))
         if self.listener_paused:
             scene.append("Escape to resume")
@@ -123,7 +134,6 @@ class App:
 
         if self.debug_text:
             print(f"DEBUG: {self.debug_text}", end=" ")
-
         print(" ".join(scene))  # Print current frame's buffer.
 
     def on_release(self, key) -> None:
@@ -163,7 +173,8 @@ class App:
         listener = keyboard.Listener(on_release=self.on_release)
         listener.start()
 
-        self.render()  # Initial rendering.
+        # Initial rendering.
+        self.render()
 
         # App loop: (while 1 is faster than while True)
         # Process input -> Update world, physics -> Render output -> Sleep.
@@ -196,7 +207,6 @@ class App:
 
             if counter >= 1:
                 frame_has_tree = randint(0, FPS // 2) == 1  # floor max int.
-                # self.foreground.pop(0)
                 self.foreground.popleft()
                 self.foreground.append(TREE_CHAR if frame_has_tree else None)
 
@@ -205,7 +215,6 @@ class App:
                     self.cloud_count -= 1 if should_cloud_disappear else 0
                     can_rain = (self.cloud_count < MAX_CLOUDS
                                 and randint(0, 2) == 1)
-                    # self.background.pop(0)
                     self.background.popleft()
                     self.background.append(CLOUD_CHAR if can_rain else None)
                     self.cloud_count += 1 if can_rain else 0
@@ -240,8 +249,7 @@ class App:
             if not self.listener_paused:
                 self.update(FRAME_DELAY)
                 self.render()
-
-            time.sleep(FRAME_DELAY)
+            sleep(FRAME_DELAY)
 
 
 if __name__ == "__main__":
@@ -327,5 +335,17 @@ if __name__ == "__main__":
     # scene.append(f"{key_count:<3}")
     # scene.append(f"{self.curr_key:<5}" if not self.listener_paused and self
                    .curr_key is not None else "Escape to resume")
+    # Use a generator expression and the join method to concatenate the
+    # scene elements instead of using repeated concatenation with the
+    # + operator:
+    # scene = [
+    #     " ".join(world),
+    #     "Escape to resume" if self.listener_paused
+    #     else self.curr_key if self.curr_key is not None else "None",
+    #     f"{self.total_km:.2f}km",
+    #     f"{self.curr_round_wpm:.2f}wpm" if self.curr_round_wpm is not None
+    #     else "0.00wpm",
+    #     f"{key_count:<3}"
+    # ]  # ? Is this join? join is faster than append.
 
 """
