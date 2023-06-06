@@ -85,13 +85,11 @@ class App:
     # - Collect data to calculate wpm.
     # - Concatenate a single buffer with message modules and print per frame.
     def render(self) -> None:
-        # PERF: self.world is used `render()` only. Use local variable.
-        self.world = [x for x in self.background]  # Compose text world.
         self.world = [
-            self.foreground[i]
-            if self.foreground[i] is not None else RAIL_CHAR
-            if self.world[i] is None else self.world[i]
-            for i in range(0, WIDTH)
+            fg if fg is not None
+            else bg if bg is not None
+            else RAIL_CHAR
+            for fg, bg in zip(self.foreground, self.background)
         ]
 
         self.world[PLAYER_POSITION] = PLAYER_CHAR
@@ -330,6 +328,16 @@ if __name__ == "__main__":
     #         self.world[i] = self.foreground[i]
     #     elif self.world[i] is None:
     #         self.world[i] = RAIL_CHAR
+
+
+    # PERF: self.world is used `render()` only. Use local variable.
+    # self.world = [x for x in self.background]  # Compose text world.
+    # self.world = [
+    #     self.foreground[i]
+    #     if self.foreground[i] is not None else RAIL_CHAR
+    #     if self.world[i] is None else self.world[i]
+    #     for i in range(0, WIDTH)
+    # ]
 
 
 """
