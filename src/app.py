@@ -111,9 +111,11 @@ class App:
 
         scene = []
         scene.append("".join(world))
-        scene.append(f"{self.curr_key:<5}"
-                     if not self.listener_paused and self.curr_key is not None
-                     else "Escape to resume")
+        if self.listener_paused:
+            scene.append("Escape to resume")
+        else:
+            scene.append(f"{self.curr_key:<5}"
+                         if self.curr_key is not None else "None")
         scene.append(f"{self.total_km:.2f}km")
         scene.append(f"{self.curr_round_wpm:.2f}wpm"
                      if self.curr_round_wpm is not None else "0.00wpm")
@@ -132,10 +134,9 @@ class App:
 
         self.key_pressed = True  # False if using on_press.
         try:
-            self.curr_key = format(key.char)
+            self.curr_key = f"{key.char}"
         except AttributeError:
-            key_char = str(key).replace("Key.", "")
-            self.curr_key = format(key_char)
+            self.curr_key = f"{key}".replace("Key.", "")
 
         self.key_history.append(self.curr_key)
 
