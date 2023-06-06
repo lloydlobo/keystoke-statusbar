@@ -32,7 +32,7 @@ MAX_CLOUDS: int = 3
 PARA_CONST: int = 9
 MAX_PARA_ELEMENTS: int = 2
 
-WPM_CHARS_PER_ROUND: int = 200
+WPM_KEYS_PER_ROUND: int = 200
 WPM_AVERAGE_WORD_LEN: int = 5
 
 
@@ -54,41 +54,39 @@ class App:
         self.total_km: float = 0.0
         self.fire_disp: int = 0
         self.cloud_count: int = 0
-        # self.char_count_wpm: int = 0
 
         # Key-related members.
         self.curr_key: Union[str, None] = None
         self.key_pressed: bool = False
-        self.new_press_event: Union[Event, None] = None
+        self.new_key_event: Union[Event, None] = None
         self.listener_paused: bool = False
 
         # Time-related members.
-        # self.start_time_wpm: float = time()
         self.wpm_timer_start: Union[float, None] = None
         self.wpm_timer_end: Union[float, None] = None  # For 200 key releases.
         self.curr_round_wpm: float = 0.0
 
         # Text-related members.
-        self.typed_history: List[str] = []
-        self.typed_history_cache: List[List[str]] = []
+        self.key_history: List[str] = []
+        self.key_history_cache: List[List[str]] = []
         self.debug_text: Union[str, None] = None
 
         # World-related members.
         self.foreground: List[Union[str, None]] = [None] * WIDTH
         self.background: List[Union[str, None]] = [None] * WIDTH
 
-    # - Merge background and foreground to compose world.
-    #   - `self.foreground[i]` is assigned to `world[i]` if not None.
-    #   - else, if `world[i]` is None, `RAIL_CHAR` is assigned.
-    # - Collect data to calculate wpm.
-    # - Concatenate a single buffer with message modules and print per frame.
     def render(self) -> None:
-        world: List[str] = [
-            fg if fg is not None
-            else bg if bg is not None
-            else RAIL_CHAR
-            for fg, bg in zip(self.foreground, self.background)
-        ]
+        """
+        - Merge background and foreground to compose world (`List[str]`).
+          - `self.foreground[i]` is assigned to `world[i]` if not None.
+          - else, assign `self.background[i]` if not None else `RAIL_CHAR`.
+        - Track, and record keypress count for each round to calculate wpm.
+        - Concatenate a single buffer with message modules and print the frame.
+        """
+
+        world = [fg if fg is not None
+                 else (bg if bg is not None else RAIL_CHAR)
+                 for fg, bg in zip(self.foreground, self.background)]
         world[PLAYER_POSITION] = PLAYER_CHAR
         if self.velocity > 0.9:
             world[PLAYER_POSITION-1] = FIRE_CHAR
@@ -96,18 +94,18 @@ class App:
                 world[PLAYER_POSITION-2] = FIRE_CHAR
             self.fire_disp += 1
 
-        len_total = len(self.typed_history)
-        if self.wpm_timer_start is None and len_total > 0:
+        key_count = len(self.key_history)
+        if self.wpm_timer_start is None and key_count > 0:
             self.wpm_timer_start = time()
-        if len_total >= WPM_CHARS_PER_ROUND:
+        if key_count >= WPM_KEYS_PER_ROUND:
             self.wpm_timer_end = time()
-            if len(self.typed_history_cache) >= 3:
-                self.typed_history_cache.clear()
-            self.typed_history_cache.append(self.typed_history)
-            self.typed_history.clear()
+            if len(self.key_history_cache) >= 3:
+                self.key_history_cache.clear()
+            self.key_history_cache.append(self.key_history)
+            self.key_history.clear()
         if self.wpm_timer_end is not None:
             self.curr_round_wpm = get_wpm(
-                WPM_CHARS_PER_ROUND, self.wpm_timer_start, self.wpm_timer_end)
+                WPM_KEYS_PER_ROUND, self.wpm_timer_start, self.wpm_timer_end,)
             self.wpm_timer_start = None
             self.wpm_timer_end = None
 
@@ -123,7 +121,7 @@ class App:
         scene.append("{:<4}".format(
             "{}wpm".format(self.curr_round_wpm)
             if self.curr_round_wpm is not None else "0.00wpm"))
-        scene.append("{:<3}".format(len_total))
+        scene.append("{:<3}".format(key_count))
 
         if self.debug_text:
             print(f"DEBUG: {self.debug_text}", end=" ")
@@ -131,10 +129,10 @@ class App:
         print(" ".join(scene))  # Print current frame's buffer.
 
     def on_release(self, key) -> None:
-        assert isinstance(self.new_press_event, Event) or (
-            self.new_press_event is None, "should be an Event on key release")
-        if self.new_press_event is not None:
-            self.new_press_event.set()
+        assert isinstance(self.new_key_event, Event) or (
+            self.new_key_event is None, "should be an Event on key release")
+        if self.new_key_event is not None:
+            self.new_key_event.set()
 
         self.key_pressed = True  # False if using on_press.
         try:
@@ -143,7 +141,7 @@ class App:
             key_char = str(key).replace("Key.", "")
             self.curr_key = format(key_char)
 
-        self.typed_history.append(self.curr_key)
+        self.key_history.append(self.curr_key)
 
         if key == keyboard.Key.esc:
             self.listener_paused = not self.listener_paused
@@ -158,35 +156,13 @@ class App:
     def resume_listener(self) -> None:
         self.listener_paused = False
 
-    def update(self, frame_delay) -> None:
-        pass
-
-    def neorun(self) -> None:
-        def keyboard_listener() -> None:
-            with keyboard.Listener(on_release=self.on_release) as listener:
-                listener.join()
-
-        listener_thread = Thread(target=keyboard_listener, daemon=True)
-        listener_thread.start()
-
-        while 1:
-            if self.new_press_event is not None:
-                self.new_press_event.wait()
-                self.new_press_event.clear()
-
-            if not self.listener_paused:
-                self.update(FRAME_DELAY)
-                self.render()
-
-            time.sleep(FRAME_DELAY)
-
     def run(self) -> None:
         accelaration = 0.0
         counter = 0.0
         para = 0
 
         # Non-Blocking: Collect events until released.
-        self.new_press_event = Event()
+        self.new_key_event = Event()
         listener = keyboard.Listener(on_release=self.on_release)
         listener.start()
 
@@ -215,8 +191,8 @@ class App:
             self.velocity = min(self.velocity, MAX_SPEED)
 
             if self.velocity == 0:
-                self.new_press_event.wait()
-                self.new_press_event.clear()
+                self.new_key_event.wait()
+                self.new_key_event.clear()
 
             curr_time = time()
             counter += self.velocity
@@ -229,9 +205,9 @@ class App:
                 if para == 0:
                     should_cloud_disappear = self.background[0] == CLOUD_CHAR
                     self.cloud_count -= 1 if should_cloud_disappear else 0
-                    self.background.pop(0)
                     can_rain = (self.cloud_count < MAX_CLOUDS
                                 and randint(0, 2) == 1)
+                    self.background.pop(0)
                     self.background.append(CLOUD_CHAR if can_rain else None)
                     self.cloud_count += 1 if can_rain else 0
 
@@ -243,6 +219,30 @@ class App:
 
             self.render()
             sleep(curr_time + FRAME_DELAY - time())
+
+    # TODO: for neorun. user controlled pauses.
+    def update(self, frame_delay) -> None:
+        pass
+
+    # TODO: for neorun. user controlled pauses.
+    def neorun(self) -> None:
+        def keyboard_listener() -> None:
+            with keyboard.Listener(on_release=self.on_release) as listener:
+                listener.join()
+
+        listener_thread = Thread(target=keyboard_listener, daemon=True)
+        listener_thread.start()
+
+        while 1:
+            if self.new_key_event is not None:
+                self.new_key_event.wait()
+                self.new_key_event.clear()
+
+            if not self.listener_paused:
+                self.update(FRAME_DELAY)
+                self.render()
+
+            time.sleep(FRAME_DELAY)
 
 
 if __name__ == "__main__":
@@ -293,4 +293,5 @@ if __name__ == "__main__":
     #         self.world[i] = self.foreground[i]
     #     elif self.world[i] is None:
     #         self.world[i] = RAIL_CHAR
+
 """
