@@ -23,7 +23,7 @@ FRAME_DELAY: float = 1.0 / FPS
 MAX_SPEED: int = 1
 FRICTION_CONST: float = 0.8
 
-RAIL_CHAR: str = '..'
+RAIL_CHAR: str = '__'
 PLAYER_CHAR: str = ''
 FIRE_CHAR: str = '='
 CLOUD_CHAR: str = ''
@@ -111,17 +111,12 @@ class App:
 
         scene = []
         scene.append("".join(world))
-        scene.append("<Esc>: Toggle keys"
-                     if self.listener_paused
-                     else "{:<{width}}".format(
-                         f"{self.curr_key}"
-                         if self.curr_key is not None
-                         else "", width=5,))
-        # scene.append("{:.2f}km".format(self.total_km))
+        scene.append(f"{self.curr_key:<5}"
+                     if not self.listener_paused and self.curr_key is not None
+                     else "Escape to resume")
         scene.append(f"{self.total_km:.2f}km")
-        scene.append("{:<4}".format(
-            "{}wpm".format(self.curr_round_wpm)
-            if self.curr_round_wpm is not None else "0.00wpm"))
+        scene.append(f"{self.curr_round_wpm:.2f}wpm"
+                     if self.curr_round_wpm is not None else "0.00wpm")
         scene.append(f"{key_count:<3}")
 
         if self.debug_text:
@@ -320,4 +315,16 @@ if __name__ == "__main__":
     # deque object changes the start of the list pointer and "forgets" the
     # oldest item. it's faster and it's one of the usages it's been
     # designed for.
+
+    # scene = []
+    # scene.append("".join(world))
+    # scene.append(f"<Esc>: Toggle keys" if self.listener_paused else f"{self
+                                                             .curr_key: <5}")
+    # scene.append(f"{self.total_km:.2f}km")
+    # scene.append(f"{self.curr_round_wpm:.2f}wpm" if self.curr_round_wpm
+                   is not None else "0.00wpm")
+    # scene.append(f"{key_count:<3}")
+    # scene.append(f"{self.curr_key:<5}" if not self.listener_paused and self
+                   .curr_key is not None else "Escape to resume")
+
 """
