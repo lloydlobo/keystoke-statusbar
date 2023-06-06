@@ -22,8 +22,7 @@ FRAME_DELAY: float = 1.0 / FPS
 MAX_SPEED: int = 1
 FRICTION_CONST: float = 0.8
 
-# RAIL_CHAR: str = '..'
-RAIL_CHAR: str = '__'
+RAIL_CHAR: str = '..'
 PLAYER_CHAR: str = ''
 FIRE_CHAR: str = '='
 CLOUD_CHAR: str = ''
@@ -44,8 +43,8 @@ def get_wpm(len_entries, time_start, time_end) -> float:
         words = len_entries / WPM_AVERAGE_WORD_LEN
         return round(words / minutes, 2)
     else:
-        raise ValueError("Invalid `wpm_timer_start` or `wpm_timer_end` \
-                         values. Expected `float` found `None`.")
+        raise ValueError("Invalid `timer_start` or `timer_end` values.\
+                         Expected `float` found `None`.")
 
 
 class App:
@@ -75,28 +74,26 @@ class App:
         self.debug_text: Union[str, None] = None
 
         # World-related members.
-        # type: List[str]
-        self.world: List[str] = [] * WIDTH
         self.foreground: List[Union[str, None]] = [None] * WIDTH
         self.background: List[Union[str, None]] = [None] * WIDTH
 
     # - Merge background and foreground to compose world.
-    #   - `self.foreground[i]` is assigned to `self.world[i]` if not None.
-    #   - else, if `self .world[i]` is None, `RAIL_CHAR` is assigned.
+    #   - `self.foreground[i]` is assigned to `world[i]` if not None.
+    #   - else, if `world[i]` is None, `RAIL_CHAR` is assigned.
     # - Collect data to calculate wpm.
     # - Concatenate a single buffer with message modules and print per frame.
     def render(self) -> None:
-        self.world = [
+        world: List[str] = [
             fg if fg is not None
             else bg if bg is not None
             else RAIL_CHAR
             for fg, bg in zip(self.foreground, self.background)
         ]
-        self.world[PLAYER_POSITION] = PLAYER_CHAR
+        world[PLAYER_POSITION] = PLAYER_CHAR
         if self.velocity > 0.9:
-            self.world[PLAYER_POSITION - 1] = FIRE_CHAR
+            world[PLAYER_POSITION-1] = FIRE_CHAR
             if self.fire_disp % 3 == 0 or self.fire_disp % 2 == 0:
-                self.world[PLAYER_POSITION - 2] = FIRE_CHAR
+                world[PLAYER_POSITION-2] = FIRE_CHAR
             self.fire_disp += 1
 
         len_total = len(self.typed_history)
@@ -114,34 +111,32 @@ class App:
             self.wpm_timer_start = None
             self.wpm_timer_end = None
 
-        output = []
-        output.append("".join(self.world))
-        output.append(
-            "<Esc>: Toggle keys"
-            if self.listener_paused else "{:<{width}}"
-            .format(f"{self.curr_key}"
-                    if self.curr_key is not None else "", width=5))
-        output.append("{:.2f}km".format(self.total_km))
-        output.append(
-            "{:<4}".format("{}wpm".format(self.curr_round_wpm)
-                           if self.curr_round_wpm is not None else "0.00wpm"))
-        output.append("{:<3}".format(len_total))
+        scene = []
+        scene.append("".join(world))
+        scene.append("<Esc>: Toggle keys"
+                     if self.listener_paused
+                     else "{:<{width}}".format(
+                         f"{self.curr_key}"
+                         if self.curr_key is not None
+                         else "", width=5,))
+        scene.append("{:.2f}km".format(self.total_km))
+        scene.append("{:<4}".format(
+            "{}wpm".format(self.curr_round_wpm)
+            if self.curr_round_wpm is not None else "0.00wpm"))
+        scene.append("{:<3}".format(len_total))
 
         if self.debug_text:
             print(f"DEBUG: {self.debug_text}", end=" ")
-        print(" ".join(output))
+
+        print(" ".join(scene))  # Print current frame's buffer.
 
     def on_release(self, key) -> None:
         assert isinstance(self.new_press_event, Event) or (
-            self.new_press_event is None,
-            "new_press_event must be an instance of Event or None"
-        )
-
+            self.new_press_event is None, "should be an Event on key release")
         if self.new_press_event is not None:
             self.new_press_event.set()
 
         self.key_pressed = True  # False if using on_press.
-
         try:
             self.curr_key = format(key.char)
         except AttributeError:
@@ -200,11 +195,9 @@ class App:
         # App loop: (while 1 is faster than while True)
         # Process input -> Update world, physics -> Render output -> Sleep.
         while 1:
-            # For when we need >1 events per tick.
-            n_events = 0
-            # Process user input. If key event happens during tick:
+            n_events = 0  # For when we need >1 events per tick.
             if (self.key_pressed):
-                n_events += 1
+                n_events += 1  # Key press event. poll tick.
                 self.key_pressed = False
             elif n_events > 0:
                 n_events -= 1
@@ -229,30 +222,32 @@ class App:
             counter += self.velocity
 
             if counter >= 1:
-                scene_has_tree = randint(0, FPS // 2) == 1  # `//` floor int.
-                self.foreground.pop(0)  # and len(self.foreground) > 0
-                self.foreground.append(TREE_CHAR if scene_has_tree else None)
+                frame_has_tree = randint(0, FPS // 2) == 1  # floor max int.
+                self.foreground.pop(0)
+                self.foreground.append(TREE_CHAR if frame_has_tree else None)
 
                 if para == 0:
                     should_cloud_disappear = self.background[0] == CLOUD_CHAR
                     self.cloud_count -= 1 if should_cloud_disappear else 0
+                    self.background.pop(0)
                     can_rain = (self.cloud_count < MAX_CLOUDS
                                 and randint(0, 2) == 1)
-                    self.background.pop(0)  # and len(self.background) > 0
-                    self.background.append(CLOUD_CHAR) if can_rain else None
-                    self.cloud_count += 1 if not can_rain else 0
+                    self.background.append(CLOUD_CHAR if can_rain else None)
+                    self.cloud_count += 1 if can_rain else 0
 
                 para += 1
                 para %= PARA_CONST  # Reset periodically.
+
                 counter -= 1
                 self.total_km += 0.01
 
             self.render()
-            sleep((curr_time + FRAME_DELAY) - time())
+            sleep(curr_time + FRAME_DELAY - time())
 
 
 if __name__ == "__main__":
-    App().run()
+    animation = App()
+    animation.run()
 
 
 """
@@ -298,27 +293,4 @@ if __name__ == "__main__":
     #         self.world[i] = self.foreground[i]
     #     elif self.world[i] is None:
     #         self.world[i] = RAIL_CHAR
-
-
-    # PERF: self.world is used `render()` only. Use local variable.
-    # self.world = [x for x in self.background]  # Compose text world.
-    # self.world = [
-    #     self.foreground[i]
-    #     if self.foreground[i] is not None else RAIL_CHAR
-    #     if self.world[i] is None else self.world[i]
-    #     for i in range(0, WIDTH)
-    # ]
-
-    # if random.randint(0, FPS // 2) == 1:
-    #     self.foreground.append(TREE_CHAR)
-    # else:
-    #     self.foreground.append(None)
-
-    # if (randint(0, 2) == 1
-    #         and self.cloud_count < MAX_CLOUD_COUNT):
-    #     self.background.append(CLOUD_CHAR)
-    #     self.cloud_count += 1
-    # else:
-    #     self.background.append(None)
-
 """
