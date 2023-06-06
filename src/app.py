@@ -7,8 +7,7 @@ Keystrokes
 Inspiration: https://github.com/petternett/railway-statusbar
 """
 
-import random
-
+from random import randint
 from time import time, sleep
 from threading import Event, Thread
 from typing import List, Union  # Literal, Optional
@@ -116,19 +115,21 @@ class App:
             self.wpm_timer_end = None
 
         output = []
-        output.append("{:<{width}}".format(
-            "".join(self.world), width=(2*WIDTH)))
+        output.append("".join(self.world))
         output.append(
-            "<Esc>: Toggle keys " if self.listener_paused else
-            "{:<{width}}".format(f"{self.curr_key} " if self.curr_key is not None else "", width=5))
-        output.append("{:.2f}km/".format(self.total_km))
-        output.append("{:<4}".format(
-            "{}wpm/".format(self.curr_round_wpm) if self.curr_round_wpm is not None else "0.00wpm"))
+            "<Esc>: Toggle keys"
+            if self.listener_paused else "{:<{width}}"
+            .format(f"{self.curr_key}"
+                    if self.curr_key is not None else "", width=5))
+        output.append("{:.2f}km".format(self.total_km))
+        output.append(
+            "{:<4}".format("{}wpm".format(self.curr_round_wpm)
+                           if self.curr_round_wpm is not None else "0.00wpm"))
         output.append("{:<3}".format(len_total))
 
         if self.debug_text:
             print(f"DEBUG: {self.debug_text}", end=" ")
-        print("".join(output))  # Print current frame's buffer.
+        print(" ".join(output))
 
     def on_release(self, key) -> None:
         assert isinstance(self.new_press_event, Event) or (
@@ -228,24 +229,17 @@ class App:
             counter += self.velocity
 
             if counter >= 1:
-                self.foreground.pop(0)
-                if random.randint(0, FPS // 2) == 1:
-                    self.foreground.append(TREE_CHAR)
-                else:
-                    self.foreground.append(None)
-
+                self.foreground.pop(0)  # and len(self.foreground) > 0
+                self.foreground.append(TREE_CHAR
+                                       if randint(0, FPS // 2) == 1 else None)
                 if para == 0:
-                    if self.background[0] == CLOUD_CHAR:
-                        self.cloud_count -= 1
-
-                    self.background.pop(0)
-
-                    if (random.randint(0, 2) == 1
-                            and self.cloud_count < MAX_CLOUD_COUNT):
-                        self.background.append(CLOUD_CHAR)
-                        self.cloud_count += 1
-                    else:
-                        self.background.append(None)
+                    should_cloud_disappear = self.background[0] == CLOUD_CHAR
+                    self.cloud_count -= 1 if should_cloud_disappear else 0
+                    can_rain = (self.cloud_count < MAX_CLOUD_COUNT
+                                and randint(0, 2) == 1)
+                    self.background.pop(0)  # and len(self.background) > 0
+                    self.background.append(CLOUD_CHAR) if can_rain else None
+                    self.cloud_count += 1 if not can_rain else 0
 
                 para += 1
                 para %= PARA_CONST  # Reset periodically.
@@ -316,4 +310,17 @@ if __name__ == "__main__":
     #     if self.world[i] is None else self.world[i]
     #     for i in range(0, WIDTH)
     # ]
+
+    # if random.randint(0, FPS // 2) == 1:
+    #     self.foreground.append(TREE_CHAR)
+    # else:
+    #     self.foreground.append(None)
+
+    # if (randint(0, 2) == 1
+    #         and self.cloud_count < MAX_CLOUD_COUNT):
+    #     self.background.append(CLOUD_CHAR)
+    #     self.cloud_count += 1
+    # else:
+    #     self.background.append(None)
+
 """
