@@ -7,6 +7,7 @@ Keystrokes
 Inspiration: https://github.com/petternett/railway-statusbar
 """
 
+from collections import deque
 from random import randint
 from time import time, sleep
 from threading import Event, Thread
@@ -72,8 +73,8 @@ class App:
         self.debug_text: Union[str, None] = None
 
         # World-related members.
-        self.foreground: List[Union[str, None]] = [None] * WIDTH
-        self.background: List[Union[str, None]] = [None] * WIDTH
+        self.foreground: deque[Union[str, None]] = deque([None] * WIDTH)
+        self.background: deque[Union[str, None]] = deque([None] * WIDTH)
 
     def render(self) -> None:
         """
@@ -84,9 +85,8 @@ class App:
         - Concatenate a single buffer with message modules and print the frame.
         """
 
-        world = [fg if fg is not None
-                 else (bg if bg is not None else RAIL_CHAR)
-                 for fg, bg in zip(self.foreground, self.background)]
+        world = [fg or bg or RAIL_CHAR for (fg, bg) in zip(
+            self.foreground, self.background)]
         world[PLAYER_POSITION] = PLAYER_CHAR
         if self.velocity > 0.9:
             world[PLAYER_POSITION-1] = FIRE_CHAR
@@ -117,11 +117,12 @@ class App:
                          f"{self.curr_key}"
                          if self.curr_key is not None
                          else "", width=5,))
-        scene.append("{:.2f}km".format(self.total_km))
+        # scene.append("{:.2f}km".format(self.total_km))
+        scene.append(f"{self.total_km:.2f}km")
         scene.append("{:<4}".format(
             "{}wpm".format(self.curr_round_wpm)
             if self.curr_round_wpm is not None else "0.00wpm"))
-        scene.append("{:<3}".format(key_count))
+        scene.append(f"{key_count:<3}")
 
         if self.debug_text:
             print(f"DEBUG: {self.debug_text}", end=" ")
@@ -199,7 +200,8 @@ class App:
 
             if counter >= 1:
                 frame_has_tree = randint(0, FPS // 2) == 1  # floor max int.
-                self.foreground.pop(0)
+                # self.foreground.pop(0)
+                self.foreground.popleft()
                 self.foreground.append(TREE_CHAR if frame_has_tree else None)
 
                 if para == 0:
@@ -207,7 +209,8 @@ class App:
                     self.cloud_count -= 1 if should_cloud_disappear else 0
                     can_rain = (self.cloud_count < MAX_CLOUDS
                                 and randint(0, 2) == 1)
-                    self.background.pop(0)
+                    # self.background.pop(0)
+                    self.background.popleft()
                     self.background.append(CLOUD_CHAR if can_rain else None)
                     self.cloud_count += 1 if can_rain else 0
 
@@ -294,4 +297,27 @@ if __name__ == "__main__":
     #     elif self.world[i] is None:
     #         self.world[i] = RAIL_CHAR
 
+    # world = [fg if fg is not None
+    #          else (bg if bg is not None else RAIL_CHAR)
+    #          for fg, bg in zip(self.foreground, self.background)]
+
+    # World-related members.
+    # self.foreground: List[Union[str, None]] = [None] * WIDTH
+    # self.background: List[Union[str, None]] = [None] * WIDTH
+
+    # https://stackoverflow.com/a/57438344
+    # In answer to your question, deques are ever-so-slightly more efficient
+    # for use as stacks than lists; if you're importing collections anyway, and
+    # need a stack based structure, using a deque will get you a tiny benefit
+    # (at # least on CPython, can't speak to other implementation). But it's
+    # not # really worth micro-optimizing here the cost of
+    # importing collections in # the first place, and the cost of
+    # whatever useful code you execute based on this stack, likely
+    # dwarfs whatever tiny difference you'll see between list and deque for
+    # pops from the right. A simple ipython3 microbenchmark:
+
+    # https://stackoverflow.com/a/50804541
+    # deque object changes the start of the list pointer and "forgets" the
+    # oldest item. it's faster and it's one of the usages it's been
+    # designed for.
 """
