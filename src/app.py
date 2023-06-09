@@ -12,6 +12,7 @@ from random import randint
 from time import time, sleep
 from threading import Event, Thread
 from typing import List, Union  # Literal, Optional
+from time import perf_counter
 
 from pynput import keyboard  # from emoji import emojize
 
@@ -226,7 +227,13 @@ class App:
                 self.total_km += 0.01
 
             self.render()
-            sleep(curr_time + FRAME_DELAY - time())
+            # sleep(curr_time + FRAME_DELAY - time())
+
+            elapsed_time = time() - curr_time
+            if elapsed_time < FRAME_DELAY:
+                sleep_time = FRAME_DELAY - elapsed_time
+                sleep(sleep_time)
+            
 
     # TODO: for neorun. user controlled pauses.
     def update(self, frame_delay) -> None:
