@@ -21,11 +21,39 @@ pip install -r requirements.txt
 
 ### Running the Script
 
-To run the `keystrokes` script, use the following command:
+To run the `keystrokes` script, follow the instructions below:
 
-```shell
-python src/app.py
-```
+#### Emulate 1D terminal game
+
+1. Open a terminal and navigate to the `keystrokes` directory.
+2. Run the following command:
+
+   ```shell
+   python -u src/app.py > game.log
+   ```
+
+   This command emulates a 1D terminal game and redirects the output to a log file named `game.log`. The `-u` flag is used to enable unbuffered output, ensuring that the log file is updated in real-time as the game progresses.
+
+3. In a separate terminal instance, run the following command:
+
+   ```shell
+   watch -n 0.033 "tail -n 1 game.log"
+   ```
+
+   This command continuously monitors the `game.log` file and displays the latest line every 0.033 seconds, creating a live gameplay experience. The interval of 0.033 seconds corresponds to a frame rate of approximately 30 frames per second (fps), providing smooth gameplay.
+
+#### For raw live output
+
+1. Open a terminal and navigate to the `keystrokes` directory.
+2. Run the following command:
+
+   ```shell
+   python src/app.py
+   ```
+
+   This command runs the script and provides raw live output without any logging.
+
+Make sure you have Python installed and the necessary dependencies are installed before running the script.
 
 ### Keybindings
 
