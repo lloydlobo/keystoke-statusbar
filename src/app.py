@@ -9,7 +9,7 @@ Inspiration: https://github.com/petternett/railway-statusbar
 
 from collections import deque
 from random import randint
-from time import time, sleep
+from time import time, sleep, perf_counter
 from threading import Event, Thread
 from typing import List, Union  # Literal, Optional
 
@@ -202,7 +202,7 @@ class App:
                 self.new_key_event.wait()
                 self.new_key_event.clear()
 
-            curr_time = time()
+            curr_time = perf_counter()
             counter += self.velocity
 
             if counter >= 1:
@@ -226,7 +226,12 @@ class App:
                 self.total_km += 0.01
 
             self.render()
-            sleep(curr_time + FRAME_DELAY - time())
+
+            # sleep(curr_time + FRAME_DELAY - time())
+            elapsed_time = perf_counter() - curr_time
+            if elapsed_time < FRAME_DELAY:
+                sleep_time = FRAME_DELAY - elapsed_time
+                sleep(sleep_time)
 
     # TODO: for neorun. user controlled pauses.
     def update(self, frame_delay) -> None:
