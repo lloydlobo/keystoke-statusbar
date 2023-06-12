@@ -29,12 +29,12 @@ To run the `keystrokes` script, follow the instructions below:
 2. Run the following command:
 
    ```shell
-   python -u src/app.py > game.log
+   python -u src/app.py > game.log &
    ```
 
-   This command emulates a 1D terminal game and redirects the output to a log file named `game.log`. The `-u` flag is used to enable unbuffered output, ensuring that the log file is updated in real-time as the game progresses.
+   This command emulates a 1D terminal game and redirects the output to a log file named `game.log`. The `-u` flag is used to enable unbuffered output, ensuring that the log file is updated in real-time as the game progresses. The `&` at the end runs the process in the background.
 
-3. In a separate terminal instance, run the following command:
+3. In a separate terminal instance or the same if `&` was used, run the following command:
 
    ```shell
    watch -n 0.033 "tail -n 1 game.log"
