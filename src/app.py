@@ -126,9 +126,13 @@ class App:
         if self.listener_paused:
             scene.append("Escape to resume")
         else:
+            # k=v v=.
             pressed = self.curr_key if self.curr_key is not None else "None"
             maps = keyboard_mappings.get(pressed)
-            scene.append(f"{pressed} at {str(maps)}")
+            map_str = str(maps)
+            map_of_map = keyboard_mappings.get(map_str)
+            scene.append(
+                f"({pressed})={map_str} ({map_str})={map_of_map}")
         scene.append(f"{self.total_km:.2f}km")
         scene.append(f"{self.curr_round_wpm:.2f}wpm"
                      if self.curr_round_wpm is not None else "0.00wpm")
