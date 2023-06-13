@@ -15,8 +15,10 @@ from typing import List, Union  # Literal, Optional
 
 from pynput import keyboard  # from emoji import emojize
 
+from keybindings import keyboard_mappings
+
 WIDTH: int = 16
-PLAYER_POSITION: int = 3  # [..][..][..][v.][RAIL_CHAR]....
+PLAYER_POSITION: int = 3  # [__][__][__][PLAYER_CHAR_][RAIL_CHAR]....
 
 FPS: int = 30
 FRAME_DELAY: float = 1.0 / FPS
@@ -94,7 +96,7 @@ class App:
                 world[PLAYER_POSITION-2] = FIRE_CHAR
             self.fire_disp += 1
 
-        # PERF: calculate key_count outside on key_release event. Loop runs
+        # TODO: calculate key_count outside on key_release event. Loop runs
         # 6x times for each keypress, or increment counter at each key press.
         key_count = len(self.key_history)
 
@@ -107,7 +109,6 @@ class App:
             # and appending elements each time, you can use a deque with
             # a maximum length to maintain a sliding window of the last
             # three key history lists:
-            #
             # self.key_history_cache = deque(self.key_history_cache, maxlen=3)
             # self.key_history_cache.append(self.key_history.copy())
 
@@ -125,8 +126,9 @@ class App:
         if self.listener_paused:
             scene.append("Escape to resume")
         else:
-            scene.append(f"{self.curr_key:<5}"
-                         if self.curr_key is not None else "None")
+            pressed = self.curr_key if self.curr_key is not None else "None"
+            maps = keyboard_mappings.get(pressed)
+            scene.append(f"{pressed} at {str(maps)}")
         scene.append(f"{self.total_km:.2f}km")
         scene.append(f"{self.curr_round_wpm:.2f}wpm"
                      if self.curr_round_wpm is not None else "0.00wpm")
@@ -134,6 +136,7 @@ class App:
 
         if self.debug_text:
             print(f"DEBUG: {self.debug_text}", end=" ")
+
         print(" ".join(scene))  # Print current frame's buffer.
 
     def on_release(self, key) -> None:
@@ -206,7 +209,7 @@ class App:
             counter += self.velocity
 
             if counter >= 1:
-                frame_has_tree = randint(0, FPS // 2) == 1  # floor max int.
+                frame_has_tree = randint(0, WIDTH) == 1  # floor max int.
                 self.foreground.popleft()
                 self.foreground.append(TREE_CHAR if frame_has_tree else None)
 
@@ -227,11 +230,9 @@ class App:
 
             self.render()
 
-            # sleep(curr_time + FRAME_DELAY - time())
             elapsed_time = perf_counter() - curr_time
             if elapsed_time < FRAME_DELAY:
-                sleep_time = FRAME_DELAY - elapsed_time
-                sleep(sleep_time)
+                sleep(FRAME_DELAY - elapsed_time)
 
     # TODO: for neorun. user controlled pauses.
     def update(self, frame_delay) -> None:
