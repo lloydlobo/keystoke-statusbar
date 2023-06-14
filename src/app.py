@@ -87,14 +87,16 @@ class App:
         - Concatenate a single buffer with message modules and print the frame.
         """
 
-        world = [fg or bg or RAIL_CHAR for (fg, bg) in zip(
-            self.foreground, self.background)]
-        world[PLAYER_POSITION] = PLAYER_CHAR
-        if self.velocity > 0.9:
-            world[PLAYER_POSITION-1] = FIRE_CHAR
-            if self.fire_disp % 3 == 0 or self.fire_disp % 2 == 0:
-                world[PLAYER_POSITION-2] = FIRE_CHAR
-            self.fire_disp += 1
+        is_enabled = False
+        if is_enabled:
+            world = [fg or bg or RAIL_CHAR for (fg, bg) in zip(
+                self.foreground, self.background)]
+            world[PLAYER_POSITION] = PLAYER_CHAR
+            if self.velocity > 0.9:
+                world[PLAYER_POSITION-1] = FIRE_CHAR
+                if self.fire_disp % 3 == 0 or self.fire_disp % 2 == 0:
+                    world[PLAYER_POSITION-2] = FIRE_CHAR
+                self.fire_disp += 1
 
         # TODO: calculate key_count outside on key_release event. Loop runs
         # 6x times for each keypress, or increment counter at each key press.
@@ -122,11 +124,10 @@ class App:
             self.wpm_timer_start = self.wpm_timer_end = None
 
         scene: List[str] = []
-        scene.append("".join(world))
+        # scene.append("".join(world))
         if self.listener_paused:
             scene.append("Escape to resume")
         else:
-            # k=v v=.
             pressed = self.curr_key if self.curr_key is not None else "None"
             maps = keyboard_mappings.get(pressed)
             map_str = str(maps)
@@ -213,18 +214,22 @@ class App:
             counter += self.velocity
 
             if counter >= 1:
-                frame_has_tree = randint(0, WIDTH) == 1  # floor max int.
-                self.foreground.popleft()
-                self.foreground.append(TREE_CHAR if frame_has_tree else None)
+                is_enabled = False
+                if is_enabled:
+                    frame_has_tree = randint(0, WIDTH) == 1  # floor max int.
+                    self.foreground.popleft()
+                    self.foreground.append(
+                        TREE_CHAR if frame_has_tree else None)
 
-                if para == 0:
-                    should_cloud_disappear = self.background[0] == CLOUD_CHAR
-                    self.cloud_count -= 1 if should_cloud_disappear else 0
-                    can_rain = (self.cloud_count < MAX_CLOUDS
-                                and randint(0, 2) == 1)
-                    self.background.popleft()
-                    self.background.append(CLOUD_CHAR if can_rain else None)
-                    self.cloud_count += 1 if can_rain else 0
+                    if para == 0:
+                        should_cloud_disappear = self.background[0] == CLOUD_CHAR
+                        self.cloud_count -= 1 if should_cloud_disappear else 0
+                        can_rain = (self.cloud_count < MAX_CLOUDS
+                                    and randint(0, 2) == 1)
+                        self.background.popleft()
+                        self.background.append(
+                            CLOUD_CHAR if can_rain else None)
+                        self.cloud_count += 1 if can_rain else 0
 
                 para += 1
                 para %= PARA_CONST  # Reset periodically.
@@ -262,100 +267,10 @@ class App:
             sleep(FRAME_DELAY)
 
 
-if __name__ == "__main__":
+def main():
     animation = App()
     animation.run()
 
 
-"""
-    # frame_start_time = time.monotonic()
-    ...
-    # NOTE: DO NOT USE THIS, as no delay leads to appending
-    # multiple chars to `world` background foreground.
-    # frame_elapsed_time = time.monotonic() - frame_start_time
-    # if frame_elapsed_time < FRAME_DELAY: sleep(FRAME_DELAY
-                                                      - frame_elapsed_time)
-
-    # def on_press(key):
-    #     if not listener_paused:
-    #         try:
-    #             key_pressed = True  # 'alphanumeric key {0} pressed'
-    #             # print('{0}'.format(key.char), end='', flush=True)
-    #         except AttributeError:
-    #             key_pressed = True  # 'special key {0} pressed'
-    #             # print('{0}'.format(key), end='', flush=True)
-
-
-    # world = [x for x in self.background]  # Compose text world.
-    # for i in range(0, WIDTH):
-    #    if self.foreground[i] is not None:
-    #        world[i] = self.foreground[i]
-    #    elif world[i] is None:
-    #        world[i] = RAIL_CHAR
-    # OR
-    # Clone and apply RAIL tracks if empty.
-    # world = [x if x is not None else RAIL_CHAR for x in self.background]
-    # world = [value if value is not None else world[i] for i, value
-    #          in enumerate(self.foreground)]
-
-    #   - Assign values from self.background. Assign `RAIL_CHAR` if None.
-    #   - Assign values from self.foreground. Keeps existing if None.
-    # self.world = [bg if bg is not None else RAIL_CHAR
-    #               for bg in self.background]
-    # self.world = [fg if fg is not None else self.world[i]
-    #               for i, fg in enumerate(self.foreground)]
-
-    # for i in range(0, WIDTH):
-    #     if self.foreground[i] is not None:
-    #         self.world[i] = self.foreground[i]
-    #     elif self.world[i] is None:
-    #         self.world[i] = RAIL_CHAR
-
-    # world = [fg if fg is not None
-    #          else (bg if bg is not None else RAIL_CHAR)
-    #          for fg, bg in zip(self.foreground, self.background)]
-
-    # World-related members.
-    # self.foreground: List[Union[str, None]] = [None] * WIDTH
-    # self.background: List[Union[str, None]] = [None] * WIDTH
-
-    # https://stackoverflow.com/a/57438344
-    # In answer to your question, deques are ever-so-slightly more efficient
-    # for use as stacks than lists; if you're importing collections anyway, and
-    # need a stack based structure, using a deque will get you a tiny benefit
-    # (at # least on CPython, can't speak to other implementation). But it's
-    # not # really worth micro-optimizing here the cost of
-    # importing collections in # the first place, and the cost of
-    # whatever useful code you execute based on this stack, likely
-    # dwarfs whatever tiny difference you'll see between list and deque for
-    # pops from the right. A simple ipython3 microbenchmark:
-
-    # https://stackoverflow.com/a/50804541
-    # deque object changes the start of the list pointer and "forgets" the
-    # oldest item. it's faster and it's one of the usages it's been
-    # designed for.
-
-    # scene = []
-    # scene.append("".join(world))
-    # scene.append(f"<Esc>: Toggle keys" if self.listener_paused else f"{self
-                                                             .curr_key: <5}")
-    # scene.append(f"{self.total_km:.2f}km")
-    # scene.append(f"{self.curr_round_wpm:.2f}wpm" if self.curr_round_wpm
-                   is not None else "0.00wpm")
-    # scene.append(f"{key_count:<3}")
-    # scene.append(f"{self.curr_key:<5}" if not self.listener_paused and self
-                   .curr_key is not None else "Escape to resume")
-    # Use a generator expression and the join method to concatenate the
-    # scene elements instead of using repeated concatenation with the
-    # + operator:
-    # scene = [
-    #     " ".join(world),
-    #     "Escape to resume" if self.listener_paused
-    #     else self.curr_key if self.curr_key is not None else "None",
-    #     f"{self.total_km:.2f}km",
-    #     f"{self.curr_round_wpm:.2f}wpm" if self.curr_round_wpm is not None
-    #     else "0.00wpm",
-    #     f"{key_count:<3}"
-    # ]  # ? Is this join? join is faster than append.
-
-"""
+if __name__ == "__main__":
+    main()
