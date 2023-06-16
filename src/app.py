@@ -50,6 +50,32 @@ def get_wpm(len_entries, time_start, time_end) -> float:
                          Expected `float` found `None`.")
 
 
+linux_modifier_keys = {
+    "space": "␣",  # Space key
+    "enter": "⏎",  # Enter key
+    "shift": "⇧",  # Shift key
+    "ctrl": "⌃",  # Control key
+    "ctrl_r": "⌃",  # Control key
+    "alt": "⌥",  # Option (Alt) key
+    "cmd": "⌘",  # Command (Apple) key
+    "cmd_r": "⌘",  # Command (Apple) key
+    "menu": "menu",  # Command (Apple) key
+    "caps_lock": "⇪",  # Caps Lock key
+    "tab": "⇥",  # Tab key
+    "delete": "⌫",  # Delete (Backspace) key
+    "esc": "⎋",  # Escape key
+    "f1": "f1",  # Function (Fn) key
+}
+
+
+def get_mod_key_symbol(mod_key: str):
+    key = mod_key.lower()
+    if key in linux_modifier_keys:
+        return linux_modifier_keys[key]
+    else:
+        return ""
+
+
 class App:
     def __init__(self):
         # Numeric members.
@@ -98,6 +124,9 @@ class App:
                     world[PLAYER_POSITION-2] = FIRE_CHAR
                 self.fire_disp += 1
 
+        keytar = [fg or bg or RAIL_CHAR for (fg, bg) in zip(
+            self.foreground, self.background)]
+
         # TODO: calculate key_count outside on key_release event. Loop runs
         # 6x times for each keypress, or increment counter at each key press.
         key_count = len(self.key_history)
@@ -125,6 +154,7 @@ class App:
 
         scene: List[str] = []
         # scene.append("".join(world))
+        scene.append("".join(keytar))
         if self.listener_paused:
             scene.append("Escape to resume")
         else:
@@ -187,6 +217,15 @@ class App:
         # App loop: (while 1 is faster than while True)
         # Process input -> Update world, physics -> Render output -> Sleep.
         while 1:
+            if self.key_pressed:
+                self.foreground.popleft()
+                curr = self.curr_key if self.curr_key is not None else ""
+                if len(curr) == 1:
+                    self.foreground.append(curr)
+                elif len(curr) > 1:
+                    symbol = get_mod_key_symbol(mod_key=curr)
+                    self.foreground.append(symbol)
+
             n_events = 0  # For when we need >1 events per tick.
             if (self.key_pressed):
                 n_events += 1  # Key press event. poll tick.
