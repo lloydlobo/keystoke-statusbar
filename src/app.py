@@ -157,12 +157,14 @@ class App:
         if self.listener_paused:
             scene.append("ctrl+alt+h to resume")
         else:
-            pressed = self.curr_key if self.curr_key is not None else ""
-            maps = keyboard_mappings.get(pressed)
-            map_str = str(maps)
-            map_of_map = keyboard_mappings.get(map_str)
-            scene.append(
-                f"{pressed}|{map_str}|{map_of_map}")
+            is_enabled = False
+            if is_enabled:
+                pressed = self.curr_key if self.curr_key is not None else ""
+                maps = keyboard_mappings.get(pressed)
+                map_str = str(maps)
+                map_of_map = keyboard_mappings.get(map_str)
+                scene.append(
+                    f"{pressed}|{map_str}|{map_of_map}")
 
             # scene.append("".join(world))
             scene.append("".join(keytar))
