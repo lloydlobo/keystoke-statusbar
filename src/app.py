@@ -25,7 +25,7 @@ FRAME_DELAY: float = 1.0 / FPS
 MAX_SPEED: int = 1
 FRICTION_CONST: float = 0.8
 
-RAIL_CHAR: str = '__'
+RAIL_CHAR: str = '_'
 PLAYER_CHAR: str = ''
 FIRE_CHAR: str = '='
 CLOUD_CHAR: str = ''
@@ -89,6 +89,7 @@ class App:
         self.key_pressed: bool = False
         self.new_key_event: Union[Event, None] = None
         self.listener_paused: bool = False
+        self.should_reset = False
 
         # Time-related members.
         self.wpm_timer_start: Union[float, None] = None
@@ -153,17 +154,19 @@ class App:
             self.wpm_timer_start = self.wpm_timer_end = None
 
         scene: List[str] = []
-        # scene.append("".join(world))
-        scene.append("".join(keytar))
         if self.listener_paused:
-            scene.append("Escape to resume")
+            scene.append("ctrl+alt+h to resume")
         else:
-            pressed = self.curr_key if self.curr_key is not None else "None"
+            pressed = self.curr_key if self.curr_key is not None else ""
             maps = keyboard_mappings.get(pressed)
             map_str = str(maps)
             map_of_map = keyboard_mappings.get(map_str)
             scene.append(
-                f"({pressed})={map_str} ({map_str})={map_of_map}")
+                f"{pressed}|{map_str}|{map_of_map}")
+
+            # scene.append("".join(world))
+            scene.append("".join(keytar))
+
         scene.append(f"{self.total_km:.2f}km")
         scene.append(f"{self.curr_round_wpm:.2f}wpm"
                      if self.curr_round_wpm is not None else "0.00wpm")
@@ -173,6 +176,14 @@ class App:
             print(f"DEBUG: {self.debug_text}", end=" ")
 
         print(" ".join(scene))  # Print current frame's buffer.
+
+    def on_activate_h(self):
+        print('ctrl-alt-h pressed: Halt ')
+        self.listener_paused = not self.listener_paused
+
+    def on_activate_i(self):
+        print('ctrl-alt-i pressed: Reseting')
+        self.should_reset = not (self.should_reset)
 
     def on_release(self, key) -> None:
         assert isinstance(self.new_key_event, Event) or (
@@ -188,9 +199,9 @@ class App:
 
         self.key_history.append(self.curr_key)
 
-        if key == keyboard.Key.esc:
-            self.listener_paused = not self.listener_paused
-            # return False # Stop listener.
+        # if key == keyboard.Key.esc:
+        #     self.listener_paused = not self.listener_paused
+        #     # return False # Stop listener.
 
     def debug(self, text: str) -> None:
         self.debug_text = text
@@ -206,6 +217,12 @@ class App:
         counter = 0.0
         para = 0
 
+        global_hot_keys = keyboard.GlobalHotKeys({
+            '<ctrl>+<alt>+h': self.on_activate_h,
+            '<ctrl>+<alt>+i': self.on_activate_i,  # reset
+        })
+        global_hot_keys.start()
+
         # Non-Blocking: Collect events until released.
         self.new_key_event = Event()
         listener = keyboard.Listener(on_release=self.on_release)
@@ -216,7 +233,7 @@ class App:
 
         # App loop: (while 1 is faster than while True)
         # Process input -> Update world, physics -> Render output -> Sleep.
-        while 1:
+        while 1 and not self.should_reset:
             if self.key_pressed:
                 self.foreground.popleft()
                 curr = self.curr_key if self.curr_key is not None else ""
