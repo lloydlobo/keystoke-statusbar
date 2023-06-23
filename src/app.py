@@ -156,16 +156,14 @@ class App:
         except AttributeError:
             self.curr_key = f"{key}".replace("Key.", "")
 
+        self.key_history.append(self.curr_key)
+
         if self.key_released:
-            self.key_history.append(self.curr_key)
             self.key_count += 1
             self.key_released = False
         else:
-            self.foreground[-1] = '░'
-            self.background[-1] = '░'
-            self.foreground[-1] = '▓'
-            self.background[-1] = '▒'
-            self.foreground[-2] = BG_CHAR
+            self.foreground[0] = None
+            self.background[0] = '░'  # '▓'
 
     def on_release(self, key) -> None:
         if self.new_key_event is not None:
