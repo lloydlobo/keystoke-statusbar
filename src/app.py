@@ -15,13 +15,7 @@ from pynput import keyboard
 from keybindings import keyboard_mappings
 
 WIDTH: int = 16
-FPS: int = 30
-FRAME_DELAY: float = 1.0 / FPS
-MAX_SPEED: int = 1
-FRICTION_CONST: float = 0.8
 BG_CHAR: str = '•'
-PARA_CONST: int = 9
-MAX_PARA_ELEMENTS: int = 2
 WPM_KEYS_PER_ROUND: int = 200
 WPM_AVERAGE_WORD_LEN: int = 5
 LINUX_MODIFIER_KEYS = {
@@ -64,12 +58,6 @@ def get_mod_key_symbol(mod_key: str):
 
 class App:
     def __init__(self):
-        # Numeric members.
-        self.velocity: float = 0.0
-        self.total_km: float = 0.0
-        self.fire_disp: int = 0
-        self.cloud_count: int = 0
-
         # Key-related members.
         self.curr_key: Union[str, None] = None
         self.key_pressed: bool = False
@@ -79,6 +67,7 @@ class App:
         self.new_key_event: Union[Event, None] = None
         self.listener_paused: bool = False
         self.should_reset = False
+        self.repeat_blinker = 0
 
         # Time-related members.
         self.wpm_timer_start: Union[float, None] = None
@@ -139,7 +128,6 @@ class App:
         scene.append(f"{self.key_count:<3}")
         scene.append(f"{self.curr_round_wpm:.2f}wpm"
                      if self.curr_round_wpm is not None else "0.00wpm")
-        scene.append(f"{self.total_km:.2f}km")
 
         if self.debug_text:
             print(f"DEBUG: {self.debug_text}", end=" ")
@@ -163,7 +151,14 @@ class App:
             self.key_released = False
         else:
             self.foreground[0] = None
-            self.background[0] = '░'  # '▓'
+            match self.repeat_blinker:
+                case 0:
+                    self.background[0] = '░'
+                case 1:
+                    self.background[0] = '▓'
+                case 2:
+                    self.background[0] = '█'
+            self.repeat_blinker = (self.repeat_blinker + 1) % 3
 
     def on_release(self, key) -> None:
         if self.new_key_event is not None:
@@ -188,9 +183,6 @@ class App:
         self.should_reset = not (self.should_reset)
 
     def run(self) -> None:
-        accelaration = 0.0
-        counter = 0.0
-
         global_hot_keys = keyboard.GlobalHotKeys({
             '<ctrl>+<alt>+h': self.on_activate_h,
             '<ctrl>+<alt>+i': self.on_activate_i,  # reset
@@ -225,42 +217,11 @@ class App:
             elif n_events > 0:
                 n_events -= 1
 
-            if 0:
-                self.debug(f"\
-released: {self.key_released}, {self.released_key}, \
-pressed: {self.curr_key}, \
-{list(self.foreground)} \
-{self.foreground[-2]} \
-")
-            if n_events > 0:
-                accelaration += 0.02
-            elif self.velocity > 0:
-                accelaration -= 0.005
-            elif self.velocity <= 0:
-                accelaration = 0
-                self.velocity = 0
-
-            # debug(f"velocity: {velocity}, ax: {ax}")
-
-            self.velocity += accelaration - self.velocity * FRICTION_CONST
-            self.velocity = min(self.velocity, MAX_SPEED)
-
-            if self.velocity == 0:
+            if n_events == 0:
                 self.new_key_event.wait()
                 self.new_key_event.clear()
 
-            # curr_time = perf_counter()
-            counter += self.velocity
-
-            if counter >= 1:
-                counter -= 1
-                self.total_km += 0.01
-
             self.render()
-
-            # elapsed_time = perf_counter() - curr_time
-            # if elapsed_time < FRAME_DELAY:
-            #     sleep(FRAME_DELAY - elapsed_time)
 
 
 def main():
