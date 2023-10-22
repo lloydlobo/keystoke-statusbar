@@ -1,8 +1,8 @@
-# Keystrokes
+# Keylogger
 
-The `keystrokes` project allows you to print your keyboard keystrokes to
-`stdout` or display them in your status bar. This can be useful for
-monitoring and displaying your keystrokes in real-time.
+The `keylogger` project allows you to print your keyboard's "keydown" 
+events to `stdout` or display them in your status bar. 
+This can be useful for monitoring or showing your keylogs in real-time.
 
 ## Usage
 
@@ -15,17 +15,17 @@ To install the required dependencies, clone the repository and run
 the following command:
 
 ```shell
-cd keystrokes
+cd keylogger
 pip install -r requirements.txt
 ```
 
 ### Running the Script
 
-To run the `keystrokes` script, follow the instructions below:
+To run the `keylogger` script, follow the instructions below:
 
 #### Emulate 1D terminal game
 
-1. Open a terminal and navigate to the `keystrokes` directory.
+1. Open a terminal and navigate to the `keylogger` directory.
 2. Run the following command:
 
    ```shell
@@ -44,7 +44,7 @@ To run the `keystrokes` script, follow the instructions below:
 
 #### For raw live output
 
-1. Open a terminal and navigate to the `keystrokes` directory.
+1. Open a terminal and navigate to the `keylogger` directory.
 2. Run the following command:
 
    ```shell
@@ -68,23 +68,23 @@ The following keybindings are available:
 
 ## Integration with Polybar
 
-To integrate `keystrokes` with Polybar, you can use the following configuration:
+To integrate `keylogger` with Polybar, you can use the following configuration:
 
 ```ini
-modules-center = keystrokes
+modules-center = keylogger
 
-[module/keystrokes]
+[module/keylogger]
 type = custom/script
-exec = "/usr/bin/python3 -u $HOME/keystrokes/src/app.py"
+exec = "/usr/bin/python3 -u $HOME/keylogger/src/app.py"
 tail = true
 ```
 
-This configuration adds the `keystrokes` module to the center section of
-your Polybar. It executes the `keystrokes` script using Python and
+This configuration adds the `keylogger` module to the center section of
+your Polybar. It executes the `keylogger` script using Python and
 displays the output in the status bar. The `tail = true` option ensures
 that the output is continuously updated in the status bar.
 
-## Credits
+## Many Thanks to
 
 - [@petternett](https://github.com/petternett/railway-statusbar)
   for providing inspiration for this project.
