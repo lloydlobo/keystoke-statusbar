@@ -49,11 +49,12 @@ def get_wpm(len_entries, time_start, time_end) -> float:
 
 
 def get_mod_key_symbol(mod_key: str):
-    key = mod_key.lower()
-    if key in LINUX_MODIFIER_KEYS:
-        return LINUX_MODIFIER_KEYS[key]
-    else:
-        return mod_key
+    """
+    Return associated value in dictionary else return mod_key
+    NOTE: Abstraction in case macOS & Windows is used (unimplemented)
+    """
+
+    return LINUX_MODIFIER_KEYS.get(mod_key.lower(), mod_key)
 
 
 class App:
@@ -111,6 +112,7 @@ class App:
             self.wpm_timer_start = self.wpm_timer_end = None
 
         scene: List[str] = []
+
         if self.listener_paused:
             scene.append("ctrl+alt+h to resume")
         else:
@@ -122,7 +124,6 @@ class App:
                 map_of_map = keyboard_mappings.get(map_str)
                 scene.append(
                     f"{pressed}|{map_str}|{map_of_map}")
-
             scene.append("".join(world))
 
         scene.append(f"{self.key_count:<3}")
@@ -131,7 +132,6 @@ class App:
 
         if self.debug_text:
             print(f"DEBUG: {self.debug_text}", end=" ")
-
         print(" ".join(scene))  # Print current frame's buffer.
 
     def on_press(self, key) -> None:
